@@ -18,15 +18,11 @@
 #include "VoidType.h"
 
 ///
-/// @brief 唯一的VOID类型实例
-///
-VoidType * VoidType::oneInstance = new VoidType();
-
-///
 /// @brief 获取类型
 /// @return VoidType*
 ///
 VoidType * VoidType::getType()
 {
+	static VoidType * oneInstance = new VoidType();
     return oneInstance;
 }

@@ -43,8 +43,4 @@ private:
     explicit VoidType() : Type(Type::VoidTyID)
     {}
 
-    ///
-    /// @brief 唯一的VOID类型实例
-    ///
-    static VoidType * oneInstance;
 };

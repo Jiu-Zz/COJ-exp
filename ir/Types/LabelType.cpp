@@ -18,15 +18,11 @@
 #include "LabelType.h"
 
 ///
-/// @brief 唯一的VOID类型实例
-///
-LabelType * LabelType::oneInstance = new LabelType();
-
-///
 /// @brief 获取类型
 /// @return VoidType*
 ///
 LabelType * LabelType::getType()
 {
+	static LabelType * oneInstance = new LabelType();
     return oneInstance;
 }

@@ -46,9 +46,4 @@ private:
     ///
     explicit LabelType() : Type(Type::LabelTyID)
     {}
-
-    ///
-    /// @brief 唯一的VOID类型实例
-    ///
-    static LabelType * oneInstance;
 };

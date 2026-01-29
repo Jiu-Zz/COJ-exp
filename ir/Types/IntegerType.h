@@ -91,16 +91,6 @@ private:
     {}
 
     ///
-    /// @brief 唯一的VOID类型实例
-    ///
-    static IntegerType * oneInstanceBool;
-
-    ///
-    /// @brief 唯一的VOID类型实例
-    ///
-    static IntegerType * oneInstanceInt;
-
-    ///
     /// @brief 位宽
     ///
     int32_t bitWidth;
