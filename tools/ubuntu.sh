@@ -21,7 +21,7 @@ sudo apt-get update
 
 # 安装一系列的软件
 sudo apt-get install -y zsh vim git wget curl python3 sudo
-sudo apt-get install -y software-properties-common apt-utils build-essential clang clangd clang-format clang-tidy bear llvm libomp-dev libtool
+sudo apt-get install -y software-properties-common apt-utils build-essential gcc g++ clang clangd clang-format clang-tidy bear llvm libomp-dev libtool
 sudo apt-get install -y cmake ninja-build
 sudo apt-get install -y graphviz graphviz-dev
 sudo apt-get install -y flex bison dos2unix
