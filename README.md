@@ -13,8 +13,6 @@
 7. 支持内置函数putint，通过它可在终端显示对应的十进制值；
 8. 变量可重名，支持变量分层管理。
 
-源代码位置：<https://github.com/NPUCompiler/exp03-minic-expr.git>
-
 ## 1.2. 编译器的文法
 
 ### 1.2.1. antlr4格式的文法
