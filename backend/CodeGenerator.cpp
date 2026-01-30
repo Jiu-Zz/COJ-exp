@@ -29,27 +29,27 @@ CodeGenerator::CodeGenerator(Module * _module) : module(_module)
 /// @return true：成功，false：失败
 bool CodeGenerator::run(std::string outFileName)
 {
-    // 打开文件，也可以以C++的方式打开文件进行操作
-    // 这里主要便于C语言学习的学生
-    if (!outFileName.empty()) {
-        // 指定文件非空时，则创建文件
-        fp = fopen(outFileName.c_str(), "w");
-        if (nullptr == fp) {
-            printf("open file(%s) failed", outFileName.c_str());
-            return false;
-        }
-    } else {
-        fp = nullptr;
-    }
+	// 打开文件，也可以以C++的方式打开文件进行操作
+	// 这里主要便于C语言学习的学生
+	if (!outFileName.empty()) {
+		// 指定文件非空时，则创建文件
+		fp = fopen(outFileName.c_str(), "w");
+		if (nullptr == fp) {
+			printf("open file(%s) failed", outFileName.c_str());
+			return false;
+		}
+	} else {
+		fp = nullptr;
+	}
 
-    // 执行真正的代码
-    const bool result = run();
+	// 执行真正的代码
+	const bool result = run();
 
-    // 关闭文件
-    if (fp) {
-        fclose(fp);
-        fp = nullptr;
-    }
+	// 关闭文件
+	if (fp) {
+		fclose(fp);
+		fp = nullptr;
+	}
 
-    return result;
+	return result;
 }

@@ -30,28 +30,28 @@ Instruction::Instruction(Function * _func, IRInstOperator _op, Type * _type) : U
 /// @return 指令操作码
 IRInstOperator Instruction::getOp()
 {
-    return op;
+	return op;
 }
 
 /// @brief 转换成字符串
 /// @param str 转换后的字符串
 void Instruction::toString(std::string & str)
 {
-    // 未知指令
-    str = "Unkown IR Instruction";
+	// 未知指令
+	str = "Unkown IR Instruction";
 }
 
 /// @brief 是否是Dead指令
 bool Instruction::isDead()
 {
-    return dead;
+	return dead;
 }
 
 /// @brief 设置指令是否是Dead指令
 /// @param _dead 是否是Dead指令，true：Dead, false: 非Dead
 void Instruction::setDead(bool _dead)
 {
-    dead = _dead;
+	dead = _dead;
 }
 
 ///
@@ -60,7 +60,7 @@ void Instruction::setDead(bool _dead)
 ///
 Function * Instruction::getFunction()
 {
-    return func;
+	return func;
 }
 
 ///
@@ -70,5 +70,5 @@ Function * Instruction::getFunction()
 ///
 bool Instruction::hasResultValue()
 {
-    return !type->isVoidType();
+	return !type->isVoidType();
 }

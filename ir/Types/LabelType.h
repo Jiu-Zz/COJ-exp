@@ -25,25 +25,25 @@
 class LabelType final : public Type {
 
 public:
-    ///
-    /// @brief 获取类型，全局只有一份
-    /// @return VoidType*
-    ///
-    static LabelType * getType();
+	///
+	/// @brief 获取类型，全局只有一份
+	/// @return VoidType*
+	///
+	static LabelType * getType();
 
-    ///
-    /// @brief 获取类型的IR标识符
-    /// @return std::string IR标识符void
-    ///
-    [[nodiscard]] std::string toString() const override
-    {
-        return "void";
-    }
+	///
+	/// @brief 获取类型的IR标识符
+	/// @return std::string IR标识符void
+	///
+	[[nodiscard]] std::string toString() const override
+	{
+		return "void";
+	}
 
 private:
-    ///
-    /// @brief 构造函数
-    ///
-    explicit LabelType() : Type(Type::LabelTyID)
-    {}
+	///
+	/// @brief 构造函数
+	///
+	explicit LabelType() : Type(Type::LabelTyID)
+	{}
 };

@@ -24,12 +24,12 @@
 class ExitInstruction : public Instruction {
 
 public:
-    ///
-    /// @brief 构造函数
-    /// @param _func 所属的函数
-    /// @param result 函数的返回值
-    ExitInstruction(Function * _func, Value * result = nullptr);
+	///
+	/// @brief 构造函数
+	/// @param _func 所属的函数
+	/// @param result 函数的返回值
+	ExitInstruction(Function * _func, Value * result = nullptr);
 
-    /// @brief 转换成字符串
-    void toString(std::string & str) override;
+	/// @brief 转换成字符串
+	void toString(std::string & str) override;
 };

@@ -24,9 +24,9 @@
 ///
 void Use::setUsee(Value * newVal)
 {
-    this->usee->removeUse(this);
-    this->usee = newVal;
-    this->usee->addUse(this);
+	this->usee->removeUse(this);
+	this->usee = newVal;
+	this->usee->addUse(this);
 }
 
 ///
@@ -35,6 +35,6 @@ void Use::setUsee(Value * newVal)
 ///
 void Use::remove()
 {
-    usee->removeUse(this);
-    user->removeOperandRaw(this);
+	usee->removeUse(this);
+	user->removeOperandRaw(this);
 }

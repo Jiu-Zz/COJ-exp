@@ -24,13 +24,13 @@
 class EntryInstruction : public Instruction {
 
 public:
-    ///
-    /// @brief 构造函数
-    ///
-    EntryInstruction(Function * _func);
+	///
+	/// @brief 构造函数
+	///
+	EntryInstruction(Function * _func);
 
-    ///
-    /// @brief 转换成IR指令字符串
-    ///
-    void toString(std::string & str) override;
+	///
+	/// @brief 转换成IR指令字符串
+	///
+	void toString(std::string & str) override;
 };

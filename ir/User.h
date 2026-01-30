@@ -31,84 +31,84 @@
 ///
 class User : public Value {
 
-    ///
-    /// @brief 操作数列表，指向当前Value的所有操作数
-    ///
-    std::vector<Use *> operands;
+	///
+	/// @brief 操作数列表，指向当前Value的所有操作数
+	///
+	std::vector<Use *> operands;
 
 public:
-    ///
-    /// @brief 构造函数
-    /// @param _type  类型
-    /// @param _name  名称
-    ///
-    User(Type * _type);
+	///
+	/// @brief 构造函数
+	/// @param _type  类型
+	/// @param _name  名称
+	///
+	User(Type * _type);
 
-    ///
-    /// @brief Get the Operands object
-    /// @return std::vector<Use *>&
-    ///
-    std::vector<Use *> & getOperands();
+	///
+	/// @brief Get the Operands object
+	/// @return std::vector<Use *>&
+	///
+	std::vector<Use *> & getOperands();
 
-    ///
-    /// @brief 取得操作数
-    /// @return std::vector<Value *>
-    ///
-    std::vector<Value *> getOperandsValue();
+	///
+	/// @brief 取得操作数
+	/// @return std::vector<Value *>
+	///
+	std::vector<Value *> getOperandsValue();
 
-    ///
-    /// @brief 获取操作数的个数
-    /// @return int32_t 个数
-    ///
-    int32_t getOperandsNum();
+	///
+	/// @brief 获取操作数的个数
+	/// @return int32_t 个数
+	///
+	int32_t getOperandsNum();
 
-    ///
-    /// @brief 获取指定的操作数
-    /// @param pos 位置
-    /// @return Value* 操作数
-    ///
-    Value * getOperand(int32_t pos);
+	///
+	/// @brief 获取指定的操作数
+	/// @param pos 位置
+	/// @return Value* 操作数
+	///
+	Value * getOperand(int32_t pos);
 
-    ///
-    /// @brief 更新指定Pos的Value
-    /// @param pos 位置
-    /// @param val 操作数
-    ///
-    void setOperand(int32_t pos, Value * val);
+	///
+	/// @brief 更新指定Pos的Value
+	/// @param pos 位置
+	/// @param val 操作数
+	///
+	void setOperand(int32_t pos, Value * val);
 
-    ///
-    /// @brief 增加操作数，或者说本身的值由这些操作数来计算得到
-    /// @param pos 索引位置
-    /// @param val 值
-    ///
-    void addOperand(Value * val);
+	///
+	/// @brief 增加操作数，或者说本身的值由这些操作数来计算得到
+	/// @param pos 索引位置
+	/// @param val 值
+	///
+	void addOperand(Value * val);
 
-    ///
-    /// @brief 清除指定的操作数
-    /// @param pos 操作数的索引
-    ///
-    void removeOperand(int pos);
+	///
+	/// @brief 清除指定的操作数
+	/// @param pos 操作数的索引
+	///
+	void removeOperand(int pos);
 
-    ///
-    /// @brief 清除指定的Use
-    /// @param val 操作指定的操作数
-    ///
-    void removeOperand(Value * val);
+	///
+	/// @brief 清除指定的Use
+	/// @param val 操作指定的操作数
+	///
+	void removeOperand(Value * val);
 
-    ///
-    /// @brief 直接清除操作数的元素
-    /// @param use 指定的元素use
-    ///
-    void removeOperandRaw(Use * use);
+	///
+	/// @brief 直接清除操作数的元素
+	/// @param use 指定的元素use
+	///
+	void removeOperandRaw(Use * use);
 
-    ///
-    /// @brief 清除指定的Use
-    /// @param use define-use边
-    ///
-    void removeUse(Use * use);
+	///
+	/// @brief 清除指定的Use
+	/// @param use define-use边
+	///
+	void removeUse(Use * use);
 
-    ///
-    /// @brief 清除所有的操作数
-    ///
-    void clearOperands();
+	///
+	/// @brief 清除所有的操作数
+	///
+	void clearOperands();
 };

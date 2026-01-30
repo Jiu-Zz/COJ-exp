@@ -24,20 +24,20 @@
 /// @param _type
 Value::Value(Type * _type) : type(_type)
 {
-    // 不需要增加代码
+	// 不需要增加代码
 }
 
 /// @brief 析构函数
 Value::~Value()
 {
-    // 如有资源清理，请这里追加代码
+	// 如有资源清理，请这里追加代码
 }
 
 /// @brief 获取名字
 /// @return 变量名
 std::string Value::getName() const
 {
-    return name;
+	return name;
 }
 
 ///
@@ -46,14 +46,14 @@ std::string Value::getName() const
 ///
 void Value::setName(std::string _name)
 {
-    this->name = _name;
+	this->name = _name;
 }
 
 /// @brief 获取名字
 /// @return 变量名
 std::string Value::getIRName() const
 {
-    return IRName;
+	return IRName;
 }
 
 ///
@@ -62,14 +62,14 @@ std::string Value::getIRName() const
 ///
 void Value::setIRName(std::string _name)
 {
-    this->IRName = _name;
+	this->IRName = _name;
 }
 
 /// @brief 获取类型
 /// @return 变量名
 Type * Value::getType()
 {
-    return type;
+	return type;
 }
 
 ///
@@ -78,7 +78,7 @@ Type * Value::getType()
 ///
 void Value::addUse(Use * use)
 {
-    uses.push_back(use);
+	uses.push_back(use);
 }
 
 ///
@@ -87,10 +87,10 @@ void Value::addUse(Use * use)
 ///
 void Value::removeUse(Use * use)
 {
-    auto pIter = std::find(uses.begin(), uses.end(), use);
-    if (pIter != uses.end()) {
-        uses.erase(pIter);
-    }
+	auto pIter = std::find(uses.begin(), uses.end(), use);
+	if (pIter != uses.end()) {
+		uses.erase(pIter);
+	}
 }
 
 ///
@@ -99,7 +99,7 @@ void Value::removeUse(Use * use)
 ///
 int32_t Value::getScopeLevel()
 {
-    return -1;
+	return -1;
 }
 
 ///
@@ -108,7 +108,7 @@ int32_t Value::getScopeLevel()
 ///
 int32_t Value::getRegId()
 {
-    return -1;
+	return -1;
 }
 
 ///
@@ -120,9 +120,9 @@ int32_t Value::getRegId()
 ///
 bool Value::getMemoryAddr(int32_t * regId, int64_t * offset)
 {
-    (void) regId;
-    (void) offset;
-    return false;
+	(void) regId;
+	(void) offset;
+	return false;
 }
 
 ///
@@ -131,7 +131,7 @@ bool Value::getMemoryAddr(int32_t * regId, int64_t * offset)
 ///
 int32_t Value::getLoadRegId()
 {
-    return -1;
+	return -1;
 }
 
 ///
@@ -140,5 +140,5 @@ int32_t Value::getLoadRegId()
 ///
 void Value::setLoadRegId(int32_t regId)
 {
-    (void) regId;
+	(void) regId;
 }

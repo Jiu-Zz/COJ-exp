@@ -24,7 +24,7 @@
 IntegerType * IntegerType::getTypeBool()
 {
 	static IntegerType * oneInstanceBool = new IntegerType(1);
-    return oneInstanceBool;
+	return oneInstanceBool;
 }
 
 ///
@@ -34,5 +34,5 @@ IntegerType * IntegerType::getTypeBool()
 IntegerType * IntegerType::getTypeInt()
 {
 	static IntegerType * oneInstanceInt = new IntegerType(32);
-    return oneInstanceInt;
+	return oneInstanceInt;
 }

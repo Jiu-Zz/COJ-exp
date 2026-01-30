@@ -65,8 +65,8 @@ std::string trim(const std::string & str);
 void minic_log_common(int level, const char * content);
 
 #define minic_log(level, fmt, args...)                                                                                 \
-    do {                                                                                                               \
-        char max_buf[1024];                                                                                            \
-        snprintf(max_buf, sizeof(max_buf), "%s:%d " fmt "\n", __FILE__, __LINE__, ##args);                             \
-        minic_log_common(level, max_buf);                                                                              \
-    } while (0)
+	do {                                                                                                               \
+		char max_buf[1024];                                                                                            \
+		snprintf(max_buf, sizeof(max_buf), "%s:%d " fmt "\n", __FILE__, __LINE__, ##args);                             \
+		minic_log_common(level, max_buf);                                                                              \
+	} while (0)

@@ -24,5 +24,5 @@
 VoidType * VoidType::getType()
 {
 	static VoidType * oneInstance = new VoidType();
-    return oneInstance;
+	return oneInstance;
 }

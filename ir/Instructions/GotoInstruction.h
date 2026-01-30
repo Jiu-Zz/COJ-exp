@@ -28,24 +28,24 @@
 class GotoInstruction final : public Instruction {
 
 public:
-    ///
-    /// @brief 无条件跳转指令的构造函数
-    /// @param target 跳转目标
-    ///
-    GotoInstruction(Function * _func, Instruction * _target);
+	///
+	/// @brief 无条件跳转指令的构造函数
+	/// @param target 跳转目标
+	///
+	GotoInstruction(Function * _func, Instruction * _target);
 
-    /// @brief 转换成字符串
-    void toString(std::string & str) override;
+	/// @brief 转换成字符串
+	void toString(std::string & str) override;
 
-    ///
-    /// @brief 获取目标Label指令
-    /// @return LabelInstruction*
-    ///
-    [[nodiscard]] LabelInstruction * getTarget() const;
+	///
+	/// @brief 获取目标Label指令
+	/// @return LabelInstruction*
+	///
+	[[nodiscard]] LabelInstruction * getTarget() const;
 
 private:
-    ///
-    /// @brief 跳转到的目标Label指令
-    ///
-    LabelInstruction * target;
+	///
+	/// @brief 跳转到的目标Label指令
+	///
+	LabelInstruction * target;
 };

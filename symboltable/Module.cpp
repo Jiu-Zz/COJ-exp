@@ -21,27 +21,27 @@
 
 Module::Module(std::string _name) : name(_name)
 {
-    // 创建作用域栈
-    scopeStack = new ScopeStack();
+	// 创建作用域栈
+	scopeStack = new ScopeStack();
 
-    // 确保全局变量作用域入栈，这样全局变量才可以加入
-    scopeStack->enterScope();
+	// 确保全局变量作用域入栈，这样全局变量才可以加入
+	scopeStack->enterScope();
 
-    // 加入内置函数putint
-    (void) newFunction("putint", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
-    (void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
+	// 加入内置函数putint
+	(void) newFunction("putint", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
+	(void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
 }
 
 /// @brief 进入作用域，如进入函数体块、语句块等
 void Module::enterScope()
 {
-    scopeStack->enterScope();
+	scopeStack->enterScope();
 }
 
 /// @brief 退出作用域，如退出函数体块、语句块等
 void Module::leaveScope()
 {
-    scopeStack->leaveScope();
+	scopeStack->leaveScope();
 }
 
 ///
@@ -50,7 +50,7 @@ void Module::leaveScope()
 ///
 Function * Module::getCurrentFunction()
 {
-    return currentFunc;
+	return currentFunc;
 }
 
 ///
@@ -59,7 +59,7 @@ Function * Module::getCurrentFunction()
 ///
 void Module::setCurrentFunction(Function * current)
 {
-    currentFunc = current;
+	currentFunc = current;
 }
 
 /// @brief 新建函数并放到函数列表中
@@ -70,32 +70,32 @@ void Module::setCurrentFunction(Function * current)
 /// @return 新建的函数对象实例
 Function * Module::newFunction(std::string name, Type * returnType, std::vector<FormalParam *> params, bool builtin)
 {
-    // 先根据函数名查找函数，若找到则出错
-    Function * tempFunc = findFunction(name);
-    if (tempFunc) {
-        // 函数已存在
-        return nullptr;
-    }
+	// 先根据函数名查找函数，若找到则出错
+	Function * tempFunc = findFunction(name);
+	if (tempFunc) {
+		// 函数已存在
+		return nullptr;
+	}
 
-    // 根据形参创建形参类型清单
-    std::vector<Type *> paramsType(params.size());
+	// 根据形参创建形参类型清单
+	std::vector<Type *> paramsType(params.size());
 
-    for (auto & param: params) {
-        paramsType.push_back(param->getType());
-    }
+	for (auto & param: params) {
+		paramsType.push_back(param->getType());
+	}
 
-    /// 函数类型参数
-    FunctionType * type = new FunctionType(returnType, paramsType);
+	/// 函数类型参数
+	FunctionType * type = new FunctionType(returnType, paramsType);
 
-    // 新建函数对象
-    tempFunc = new Function(name, type, builtin);
+	// 新建函数对象
+	tempFunc = new Function(name, type, builtin);
 
-    // 设置参数
-    tempFunc->getParams().assign(params.begin(), params.end());
+	// 设置参数
+	tempFunc->getParams().assign(params.begin(), params.end());
 
-    insertFunctionDirectly(tempFunc);
+	insertFunctionDirectly(tempFunc);
 
-    return tempFunc;
+	return tempFunc;
 }
 
 /// @brief 根据函数名查找函数信息
@@ -103,14 +103,14 @@ Function * Module::newFunction(std::string name, Type * returnType, std::vector<
 /// @return 函数信息
 Function * Module::findFunction(std::string name)
 {
-    // 根据名字查找
-    auto pIter = funcMap.find(name);
-    if (pIter != funcMap.end()) {
-        // 查找到
-        return pIter->second;
-    }
+	// 根据名字查找
+	auto pIter = funcMap.find(name);
+	if (pIter != funcMap.end()) {
+		// 查找到
+		return pIter->second;
+	}
 
-    return nullptr;
+	return nullptr;
 }
 
 ///
@@ -119,8 +119,8 @@ Function * Module::findFunction(std::string name)
 ///
 void Module::insertFunctionDirectly(Function * func)
 {
-    funcMap.insert({func->getName(), func});
-    funcVector.emplace_back(func);
+	funcMap.insert({func->getName(), func});
+	funcVector.emplace_back(func);
 }
 
 /// @brief Value直接插入到符号表中的全局变量中
@@ -128,8 +128,8 @@ void Module::insertFunctionDirectly(Function * func)
 /// @param val Value信息
 void Module::insertGlobalValueDirectly(GlobalVariable * val)
 {
-    globalVariableMap.emplace(val->getName(), val);
-    globalVariableVector.push_back(val);
+	globalVariableMap.emplace(val->getName(), val);
+	globalVariableVector.push_back(val);
 }
 
 /// @brief Value直接插入到符号表中的全局变量中
@@ -137,7 +137,7 @@ void Module::insertGlobalValueDirectly(GlobalVariable * val)
 /// @param val Value信息
 void Module::insertConstIntDirectly(ConstInt * val)
 {
-    constIntMap.emplace(val->getVal(), val);
+	constIntMap.emplace(val->getVal(), val);
 }
 
 /// @brief 新建一个整型数值的Value，并加入到符号表，用于后续释放空间
@@ -145,17 +145,17 @@ void Module::insertConstIntDirectly(ConstInt * val)
 /// @return 常量Value
 ConstInt * Module::newConstInt(int32_t intVal)
 {
-    // 查找整数字符串
-    ConstInt * val = findConstInt(intVal);
-    if (!val) {
+	// 查找整数字符串
+	ConstInt * val = findConstInt(intVal);
+	if (!val) {
 
-        // 不存在，则创建整数常量Value
-        val = new ConstInt(intVal);
+		// 不存在，则创建整数常量Value
+		val = new ConstInt(intVal);
 
-        insertConstIntDirectly(val);
-    }
+		insertConstIntDirectly(val);
+	}
 
-    return val;
+	return val;
 }
 
 /// @brief 根据整数值获取当前符号
@@ -163,15 +163,15 @@ ConstInt * Module::newConstInt(int32_t intVal)
 /// \return 变量对应的值
 ConstInt * Module::findConstInt(int32_t val)
 {
-    ConstInt * temp = nullptr;
+	ConstInt * temp = nullptr;
 
-    auto pIter = constIntMap.find(val);
-    if (pIter != constIntMap.end()) {
-        // 查找到
-        temp = pIter->second;
-    }
+	auto pIter = constIntMap.find(val);
+	if (pIter != constIntMap.end()) {
+		// 查找到
+		temp = pIter->second;
+	}
 
-    return temp;
+	return temp;
 }
 
 /// @brief 在当前的作用域中查找，若没有查找到则创建局部变量或者全局变量。请注意不能创建临时变量
@@ -181,44 +181,44 @@ ConstInt * Module::findConstInt(int32_t val)
 /// @return nullptr则说明变量已存在，否则为新建的变量
 Value * Module::newVarValue(Type * type, std::string name)
 {
-    Value * retVal;
-    std::string varName;
+	Value * retVal;
+	std::string varName;
 
-    // 若变量名有效，检查当前作用域中是否存在变量，如存在则语义错误
-    // 反之，因无效需创建新的变量名，肯定不现在的不同，不需要查找
-    if (!name.empty()) {
-        Value * tempValue = scopeStack->findCurrentScope(name);
-        if (tempValue) {
-            // 变量存在，语义错误
-            minic_log(LOG_ERROR, "变量(%s)已经存在", name.c_str());
-            return nullptr;
-        }
-    } else if (!currentFunc) {
-        // 全局变量要求name不能为空串，必须有效
-        minic_log(LOG_ERROR, "变量名为空");
-        return nullptr;
-    }
+	// 若变量名有效，检查当前作用域中是否存在变量，如存在则语义错误
+	// 反之，因无效需创建新的变量名，肯定不现在的不同，不需要查找
+	if (!name.empty()) {
+		Value * tempValue = scopeStack->findCurrentScope(name);
+		if (tempValue) {
+			// 变量存在，语义错误
+			minic_log(LOG_ERROR, "变量(%s)已经存在", name.c_str());
+			return nullptr;
+		}
+	} else if (!currentFunc) {
+		// 全局变量要求name不能为空串，必须有效
+		minic_log(LOG_ERROR, "变量名为空");
+		return nullptr;
+	}
 
-    if (currentFunc) {
+	if (currentFunc) {
 
-        // 获取变量作用域的层级
-        int32_t scope_level;
-        if (name.empty()) {
-            scope_level = 1;
-        } else {
-            scope_level = scopeStack->getCurrentScopeLevel();
-        }
+		// 获取变量作用域的层级
+		int32_t scope_level;
+		if (name.empty()) {
+			scope_level = 1;
+		} else {
+			scope_level = scopeStack->getCurrentScopeLevel();
+		}
 
-        retVal = currentFunc->newLocalVarValue(type, name, scope_level);
+		retVal = currentFunc->newLocalVarValue(type, name, scope_level);
 
-    } else {
-        retVal = newGlobalVariable(type, name);
-    }
+	} else {
+		retVal = newGlobalVariable(type, name);
+	}
 
-    // 增加做作用域中
-    scopeStack->insertValue(retVal);
+	// 增加做作用域中
+	scopeStack->insertValue(retVal);
 
-    return retVal;
+	return retVal;
 }
 
 /// @brief 查找变量，会根据作用域栈进行逐级查找。
@@ -228,10 +228,10 @@ Value * Module::newVarValue(Type * type, std::string name)
 /// @return 指针有效则找到，空指针未找到
 Value * Module::findVarValue(std::string name)
 {
-    // 逐层级作用域查找
-    Value * tempValue = scopeStack->findAllScope(name);
+	// 逐层级作用域查找
+	Value * tempValue = scopeStack->findAllScope(name);
 
-    return tempValue;
+	return tempValue;
 }
 
 ///
@@ -242,11 +242,11 @@ Value * Module::findVarValue(std::string name)
 ///
 GlobalVariable * Module::newGlobalVariable(Type * type, std::string name)
 {
-    GlobalVariable * val = new GlobalVariable(type, name);
+	GlobalVariable * val = new GlobalVariable(type, name);
 
-    insertGlobalValueDirectly(val);
+	insertGlobalValueDirectly(val);
 
-    return val;
+	return val;
 }
 
 /// @brief 根据变量名获取当前符号(只管理全局变量和常量)
@@ -255,36 +255,36 @@ GlobalVariable * Module::newGlobalVariable(Type * type, std::string name)
 /// @return 变量对应的值
 GlobalVariable * Module::findGlobalVariable(std::string name)
 {
-    GlobalVariable * temp = nullptr;
+	GlobalVariable * temp = nullptr;
 
-    auto pIter = globalVariableMap.find(name);
-    if (pIter != globalVariableMap.end()) {
-        // 查找到
-        temp = pIter->second;
-    }
+	auto pIter = globalVariableMap.find(name);
+	if (pIter != globalVariableMap.end()) {
+		// 查找到
+		temp = pIter->second;
+	}
 
-    return temp;
+	return temp;
 }
 
 /// @brief 清理注册的所有Value资源
 void Module::Delete()
 {
-    // 清除所有的函数
-    for (auto func: funcVector) {
-        delete func;
-    }
+	// 清除所有的函数
+	for (auto func: funcVector) {
+		delete func;
+	}
 
-    // 清理全局变量
-    for (auto var: globalVariableVector) {
-        delete var;
-    }
+	// 清理全局变量
+	for (auto var: globalVariableVector) {
+		delete var;
+	}
 
-    // 相关列表清空
-    globalVariableMap.clear();
-    globalVariableVector.clear();
+	// 相关列表清空
+	globalVariableMap.clear();
+	globalVariableVector.clear();
 
-    funcMap.clear();
-    funcVector.clear();
+	funcMap.clear();
+	funcVector.clear();
 }
 
 ///
@@ -292,42 +292,42 @@ void Module::Delete()
 ///
 void Module::renameIR()
 {
-    // 全局变量目前都有名字，目前不存在没有名字的变量，因此
-    // 对于全局变量的线性IR名称，只是在原来的名称前追加@即可
+	// 全局变量目前都有名字，目前不存在没有名字的变量，因此
+	// 对于全局变量的线性IR名称，只是在原来的名称前追加@即可
 
-    // 遍历所有的函数，含局部变量名、形参、Label名、指令变量重命名
-    for (auto func: funcVector) {
-        func->renameIR();
-    }
+	// 遍历所有的函数，含局部变量名、形参、Label名、指令变量重命名
+	for (auto func: funcVector) {
+		func->renameIR();
+	}
 }
 
 /// @brief 文本输出线性IR指令
 /// @param filePath 输出文件路径
 void Module::outputIR(const std::string & filePath)
 {
-    // 这里使用C的文件操作，也可以使用C++的文件操作
+	// 这里使用C的文件操作，也可以使用C++的文件操作
 
-    FILE * fp = fopen(filePath.c_str(), "w");
-    if (nullptr == fp) {
-        printf("fopen() failed\n");
-        return;
-    }
+	FILE * fp = fopen(filePath.c_str(), "w");
+	if (nullptr == fp) {
+		printf("fopen() failed\n");
+		return;
+	}
 
-    // 全局变量遍历输出对应的declare指令
-    for (auto var: globalVariableVector) {
+	// 全局变量遍历输出对应的declare指令
+	for (auto var: globalVariableVector) {
 
-        std::string str;
-        var->toDeclareString(str);
-        fprintf(fp, "%s\n", str.c_str());
-    }
+		std::string str;
+		var->toDeclareString(str);
+		fprintf(fp, "%s\n", str.c_str());
+	}
 
-    // 遍历所有的线性IR指令，文本输出
-    for (auto func: funcVector) {
+	// 遍历所有的线性IR指令，文本输出
+	for (auto func: funcVector) {
 
-        std::string instStr;
-        func->toString(instStr);
-        fprintf(fp, "%s", instStr.c_str());
-    }
+		std::string instStr;
+		func->toString(instStr);
+		fprintf(fp, "%s", instStr.c_str());
+	}
 
-    fclose(fp);
+	fclose(fp);
 }

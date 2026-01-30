@@ -16,6 +16,15 @@
 // LR分析失败时所调用函数的原型声明
 void yyerror(char * msg);
 
+// 指向创建的抽象语法树
+static ast_node * ast_root;
+
+// 向外部提供的接口函数，用于返回抽象语法树的根节点
+ast_node * get_ast_root()
+{
+	return ast_root;
+}
+
 %}
 
 // 联合体声明，用于后续终结符和非终结符号属性指定使用
@@ -75,7 +84,7 @@ void yyerror(char * msg);
 CompileUnit : FuncDef {
 
 		// 创建一个编译单元的节点AST_OP_COMPILE_UNIT
-		$$ = create_contain_node(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
+		$$ = ast_node::New(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
 
 		// 设置到全局变量中
 		ast_root = $$;
@@ -83,7 +92,7 @@ CompileUnit : FuncDef {
 	| VarDecl {
 
 		// 创建一个编译单元的节点AST_OP_COMPILE_UNIT
-		$$ = create_contain_node(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
+		$$ = ast_node::New(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
 		ast_root = $$;
 	}
 	| CompileUnit FuncDef {
@@ -114,7 +123,7 @@ FuncDef : BasicType T_ID T_L_PAREN T_R_PAREN Block  {
 
 		// 创建函数定义的节点，孩子有类型，函数名，语句块和形参(实际上无)
 		// create_func_def函数内会释放funcId中指向的标识符空间，切记，之后不要再释放，之前一定要是通过strdup函数或者malloc分配的空间
-		$$ = create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
+		$$ = ast_node::create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
 	}
 	;
 
@@ -125,7 +134,7 @@ Block : T_L_BRACE T_R_BRACE {
 		// 语句块没有语句
 
 		// 为了方便创建一个空的Block节点
-		$$ = create_contain_node(ast_operator_type::AST_OP_BLOCK);
+		$$ = ast_node::New(ast_operator_type::AST_OP_BLOCK);
 	}
 	| T_L_BRACE BlockItemList T_R_BRACE {
 		// 语句块含有语句
@@ -141,7 +150,7 @@ Block : T_L_BRACE T_R_BRACE {
 BlockItemList : BlockItem {
 		// 第一个左侧的孩子节点归约成Block节点，后续语句可持续作为孩子追加到Block节点中
 		// 创建一个AST_OP_BLOCK类型的中间节点，孩子为Statement($1)
-		$$ = create_contain_node(ast_operator_type::AST_OP_BLOCK, $1);
+		$$ = ast_node::New(ast_operator_type::AST_OP_BLOCK, $1);
 	}
 	| BlockItemList BlockItem {
 		// 把BlockItem归约的节点加入到BlockItemList的节点中
@@ -176,14 +185,14 @@ VarDecl : VarDeclExpr T_SEMICOLON {
 VarDeclExpr: BasicType VarDef {
 
 		// 创建类型节点
-		ast_node * type_node = create_type_node($1);
+		ast_node * type_node = ast_node::create_type_node($1);
 
 		// 创建变量定义节点
-		ast_node * decl_node = create_contain_node(ast_operator_type::AST_OP_VAR_DECL, type_node, $2);
+		ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, $2);
 		decl_node->type = type_node->type;
 
 		// 创建变量声明语句，并加入第一个变量
-		$$ = create_var_decl_stmt_node(decl_node);
+		$$ = ast_node::create_var_decl_stmt_node(decl_node);
 	}
 	| VarDeclExpr T_COMMA VarDef {
 
@@ -191,7 +200,7 @@ VarDeclExpr: BasicType VarDef {
 		ast_node * type_node = ast_node::New($1->type);
 
 		// 创建变量定义节点
-		ast_node * decl_node = create_contain_node(ast_operator_type::AST_OP_VAR_DECL, type_node, $3);
+		ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, $3);
 
 		// 插入到变量声明语句
 		$$ = $1->insert_son_node(decl_node);
@@ -223,13 +232,13 @@ Statement : T_RETURN Expr T_SEMICOLON {
 		// 返回语句
 
 		// 创建返回节点AST_OP_RETURN，其孩子为Expr，即$2
-		$$ = create_contain_node(ast_operator_type::AST_OP_RETURN, $2);
+		$$ = ast_node::New(ast_operator_type::AST_OP_RETURN, $2);
 	}
 	| LVal T_ASSIGN Expr T_SEMICOLON {
 		// 赋值语句
 
 		// 创建一个AST_OP_ASSIGN类型的中间节点，孩子为LVal($1)和Expr($3)
-		$$ = create_contain_node(ast_operator_type::AST_OP_ASSIGN, $1, $3);
+		$$ = ast_node::New(ast_operator_type::AST_OP_ASSIGN, $1, $3);
 	}
 	| Block {
 		// 语句块
@@ -273,13 +282,13 @@ AddExp : UnaryExp {
 		// 两个一目表达式的加减运算
 
 		// 创建加减运算节点，其孩子为两个一目表达式节点
-		$$ = create_contain_node(ast_operator_type($2), $1, $3);
+		$$ = ast_node::New(ast_operator_type($2), $1, $3);
 	}
 	| AddExp AddOp UnaryExp {
 		// 左递归形式可通过加减连接多个一元表达式
 
 		// 创建加减运算节点，孩子为AddExp($1)和UnaryExp($3)
-		$$ = create_contain_node(ast_operator_type($2), $1, $3);
+		$$ = ast_node::New(ast_operator_type($2), $1, $3);
 	}
 	;
 
@@ -315,7 +324,7 @@ UnaryExp : PrimaryExp {
 		ast_node * paramListNode = nullptr;
 
 		// 创建函数调用节点，其孩子为被调用函数名和实参，实参为空，但函数内部会创建实参列表节点，无孩子
-		$$ = create_func_call(name_node, paramListNode);
+		$$ = ast_node::create_func_call(name_node, paramListNode);
 
 	}
 	| T_ID T_L_PAREN RealParamList T_R_PAREN {
@@ -331,7 +340,7 @@ UnaryExp : PrimaryExp {
 		ast_node * paramListNode = $3;
 
 		// 创建函数调用节点，其孩子为被调用函数名和实参，实参不为空
-		$$ = create_func_call(name_node, paramListNode);
+		$$ = ast_node::create_func_call(name_node, paramListNode);
 	}
 	;
 
@@ -361,7 +370,7 @@ PrimaryExp :  T_L_PAREN Expr T_R_PAREN {
 // 左递归文法为：RealParamList : Expr | 左递归文法为：RealParamList T_COMMA expr
 RealParamList : Expr {
 		// 创建实参列表节点，并把当前的Expr节点加入
-		$$ = create_contain_node(ast_operator_type::AST_OP_FUNC_REAL_PARAMS, $1);
+		$$ = ast_node::New(ast_operator_type::AST_OP_FUNC_REAL_PARAMS, $1);
 	}
 	| RealParamList T_COMMA Expr {
 		// 左递归增加实参表达式

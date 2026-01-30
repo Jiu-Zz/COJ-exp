@@ -26,10 +26,12 @@ int yyparse();
 #endif
 #else /* ! YYPARSE_PARAM */
 #if defined __STDC__ || defined __cplusplus
-int yyparse(void);
+int yyparse();
 #else
 int yyparse();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
 #include "MiniCBison.h"
+
+ast_node * get_ast_root();

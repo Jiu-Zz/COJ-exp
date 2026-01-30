@@ -20,9 +20,9 @@
 ///
 void ScopeStack::enterScope()
 {
-    // 在栈顶新加入一层，没有变量
-    std::unordered_map<std::string, Value *> valueMap;
-    valueStack.emplace_back(valueMap);
+	// 在栈顶新加入一层，没有变量
+	std::unordered_map<std::string, Value *> valueMap;
+	valueStack.emplace_back(valueMap);
 }
 
 ///
@@ -30,7 +30,7 @@ void ScopeStack::enterScope()
 ///
 void ScopeStack::leaveScope()
 {
-    valueStack.pop_back();
+	valueStack.pop_back();
 }
 
 ///
@@ -39,7 +39,7 @@ void ScopeStack::leaveScope()
 ///
 void ScopeStack::insertValue(Value * value)
 {
-    valueStack.back().insert(make_pair(value->getName(), value));
+	valueStack.back().insert(make_pair(value->getName(), value));
 }
 
 ///
@@ -49,12 +49,12 @@ void ScopeStack::insertValue(Value * value)
 ///
 Value * ScopeStack::findCurrentScope(std::string name)
 {
-    // 在栈顶的作用域中查找，即当前作用域
-    auto it = valueStack.back().find(name);
-    if (it != valueStack.back().end()) {
-        return it->second;
-    }
-    return nullptr;
+	// 在栈顶的作用域中查找，即当前作用域
+	auto it = valueStack.back().find(name);
+	if (it != valueStack.back().end()) {
+		return it->second;
+	}
+	return nullptr;
 }
 
 ///
@@ -64,14 +64,14 @@ Value * ScopeStack::findCurrentScope(std::string name)
 ///
 Value * ScopeStack::findAllScope(std::string name)
 {
-    // 模拟栈操作，从栈顶开始查找
-    for (auto it = valueStack.rbegin(); it != valueStack.rend(); ++it) {
-        auto p = it->find(name);
-        if (p != it->end()) {
-            return p->second;
-        }
-    }
-    return nullptr;
+	// 模拟栈操作，从栈顶开始查找
+	for (auto it = valueStack.rbegin(); it != valueStack.rend(); ++it) {
+		auto p = it->find(name);
+		if (p != it->end()) {
+			return p->second;
+		}
+	}
+	return nullptr;
 }
 
 ///
@@ -80,5 +80,5 @@ Value * ScopeStack::findAllScope(std::string name)
 ///
 int ScopeStack::getCurrentScopeLevel()
 {
-    return valueStack.size() - 1;
+	return valueStack.size() - 1;
 }

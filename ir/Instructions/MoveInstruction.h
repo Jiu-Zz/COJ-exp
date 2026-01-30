@@ -29,14 +29,14 @@ class Function;
 class MoveInstruction : public Instruction {
 
 public:
-    ///
-    /// @brief 构造函数
-    /// @param _func 所属的函数
-    /// @param result 结构操作数
-    /// @param srcVal1 源操作数
-    ///
-    MoveInstruction(Function * _func, Value * result, Value * srcVal1);
+	///
+	/// @brief 构造函数
+	/// @param _func 所属的函数
+	/// @param result 结构操作数
+	/// @param srcVal1 源操作数
+	///
+	MoveInstruction(Function * _func, Value * result, Value * srcVal1);
 
-    /// @brief 转换成字符串
-    void toString(std::string & str) override;
+	/// @brief 转换成字符串
+	void toString(std::string & str) override;
 };

@@ -24,67 +24,67 @@
 
 class FunctionType final : public Type {
 public:
-    ///
-    /// @brief 函数类型
-    /// @param retType 函数返回值类型
-    /// @param argTypes 函数形参类型
-    ///
-    FunctionType(Type * _retType, std::vector<Type *> _argTypes) : retType{_retType}, argTypes{std::move(_argTypes)}
-    {}
+	///
+	/// @brief 函数类型
+	/// @param retType 函数返回值类型
+	/// @param argTypes 函数形参类型
+	///
+	FunctionType(Type * _retType, std::vector<Type *> _argTypes) : retType{_retType}, argTypes{std::move(_argTypes)}
+	{}
 
-    ///
-    /// @brief 函数类型的IR字符串
-    /// @return std::string
-    ///
-    [[nodiscard]] std::string toString() const override
-    {
-        std::string typeStr;
+	///
+	/// @brief 函数类型的IR字符串
+	/// @return std::string
+	///
+	[[nodiscard]] std::string toString() const override
+	{
+		std::string typeStr;
 
-        typeStr = retType->toString() + " (*)(";
+		typeStr = retType->toString() + " (*)(";
 
-        // 遍历形参类型
-        bool first = true;
-        for (Type * type: argTypes) {
+		// 遍历形参类型
+		bool first = true;
+		for (Type * type: argTypes) {
 
-            if (first) {
-                typeStr += type->toString();
-                first = false;
-            } else {
-                typeStr += ", " + type->toString();
-            }
-        }
+			if (first) {
+				typeStr += type->toString();
+				first = false;
+			} else {
+				typeStr += ", " + type->toString();
+			}
+		}
 
-        typeStr += ")";
+		typeStr += ")";
 
-        return typeStr;
-    }
+		return typeStr;
+	}
 
-    ///
-    /// @brief 获取返回类型
-    /// @return const Type*
-    ///
-    [[nodiscard]] Type * getReturnType() const
-    {
-        return retType;
-    }
+	///
+	/// @brief 获取返回类型
+	/// @return const Type*
+	///
+	[[nodiscard]] Type * getReturnType() const
+	{
+		return retType;
+	}
 
-    ///
-    /// @brief 获取形参清单
-    /// @return const std::vector<const Type *>&
-    ///
-    [[nodiscard]] const std::vector<Type *> & getArgTypes() const
-    {
-        return argTypes;
-    }
+	///
+	/// @brief 获取形参清单
+	/// @return const std::vector<const Type *>&
+	///
+	[[nodiscard]] const std::vector<Type *> & getArgTypes() const
+	{
+		return argTypes;
+	}
 
 private:
-    ///
-    /// @brief 返回类型
-    ///
-    Type * retType;
+	///
+	/// @brief 返回类型
+	///
+	Type * retType;
 
-    ///
-    /// @brief 形参类型清单
-    ///
-    std::vector<Type *> argTypes;
+	///
+	/// @brief 形参类型清单
+	///
+	std::vector<Type *> argTypes;
 };

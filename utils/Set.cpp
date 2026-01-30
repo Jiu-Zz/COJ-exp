@@ -21,153 +21,157 @@
 #include "Set.h"
 
 /*
-    构造函数
+	构造函数
 */
 Set::Set()
 {
-    count = 0;
+	count = 0;
 }
 
 // 从0开始的前count元素设置有效或者无效
 void Set::init(uint32_t _count, bool val)
 {
-    // 如果全部都设置为0，则可以直接clear即可，不用erase
-    if (this->count >= _count && 0 == val) {
-        this->count = _count;
-        this->bitmap.clear();
-        return;
-    }
+	// 如果全部都设置为0，则可以直接clear即可，不用erase
+	if (this->count >= _count && 0 == val) {
+		this->count = _count;
+		this->bitmap.clear();
+		return;
+	}
 
-    this->count = _count;
+	this->count = _count;
 
-    for (uint32_t k = 0; k < _count; k++) {
-        if (val) {
-            this->bitmap.insert(k);
-        } else {
-            this->bitmap.erase(k);
-        }
-    }
+	for (uint32_t k = 0; k < _count; k++) {
+		if (val) {
+			this->bitmap.insert(k);
+		} else {
+			this->bitmap.erase(k);
+		}
+	}
 }
 
 // 从[from, to]全部设置
 void Set::init(uint32_t from, uint32_t to, bool val)
 {
-    for (uint32_t k = from; k < to; k++) {
-        if (val) {
-            this->bitmap.insert(k);
-        } else {
-            this->bitmap.erase(k);
-        }
-    }
+	for (uint32_t k = from; k < to; k++) {
+		if (val) {
+			this->bitmap.insert(k);
+		} else {
+			this->bitmap.erase(k);
+		}
+	}
 }
 
 void Set::clear()
 {
-    this->bitmap.clear();
+	this->bitmap.clear();
 }
 
 /*
-    交集运算
+	交集运算
 */
 Set Set::operator&(Set val)
 {
-    Set ret;
+	Set ret;
 
-    set_intersection(std::begin(this->bitmap),
-                     std::end(this->bitmap),
-                     std::begin(val.bitmap),
-                     std::end(val.bitmap),
-                     std::inserter(ret.bitmap, std::begin(ret.bitmap)));
+	set_intersection(
+		std::begin(this->bitmap),
+		std::end(this->bitmap),
+		std::begin(val.bitmap),
+		std::end(val.bitmap),
+		std::inserter(ret.bitmap, std::begin(ret.bitmap)));
 
-    ret.count = std::max(this->count, val.count);
+	ret.count = std::max(this->count, val.count);
 
-    return ret;
+	return ret;
 }
 
 /*
-    并集运算
+	并集运算
 */
 Set Set::operator|(Set val)
 {
-    Set ret;
+	Set ret;
 
-    set_union(std::begin(this->bitmap),
-              std::end(this->bitmap),
-              std::begin(val.bitmap),
-              std::end(val.bitmap),
-              std::inserter(ret.bitmap, std::begin(ret.bitmap)));
+	set_union(
+		std::begin(this->bitmap),
+		std::end(this->bitmap),
+		std::begin(val.bitmap),
+		std::end(val.bitmap),
+		std::inserter(ret.bitmap, std::begin(ret.bitmap)));
 
-    ret.count = std::max(this->count, val.count);
+	ret.count = std::max(this->count, val.count);
 
-    return ret;
+	return ret;
 }
 
 /*
-    差集运算
+	差集运算
 */
 Set Set::operator-(Set val)
 {
-    Set ret;
+	Set ret;
 
-    set_difference(std::begin(this->bitmap),
-                   std::end(this->bitmap),
-                   std::begin(val.bitmap),
-                   std::end(val.bitmap),
-                   std::inserter(ret.bitmap, std::begin(ret.bitmap)));
+	set_difference(
+		std::begin(this->bitmap),
+		std::end(this->bitmap),
+		std::begin(val.bitmap),
+		std::end(val.bitmap),
+		std::inserter(ret.bitmap, std::begin(ret.bitmap)));
 
-    ret.count = std::max(this->count, val.count);
+	ret.count = std::max(this->count, val.count);
 
-    return ret;
+	return ret;
 }
 
 //异或运算
 Set Set::operator^(Set val)
 {
-    Set ret;
+	Set ret;
 
-    set_symmetric_difference(std::begin(this->bitmap),
-                             std::end(this->bitmap),
-                             std::begin(val.bitmap),
-                             std::end(val.bitmap),
-                             std::inserter(ret.bitmap, std::begin(ret.bitmap)));
+	set_symmetric_difference(
+		std::begin(this->bitmap),
+		std::end(this->bitmap),
+		std::begin(val.bitmap),
+		std::end(val.bitmap),
+		std::inserter(ret.bitmap, std::begin(ret.bitmap)));
 
-    ret.count = std::max(this->count, val.count);
+	ret.count = std::max(this->count, val.count);
 
-    return ret;
+	return ret;
 }
 
 // 补集运算
 Set Set::operator~()
 {
-    Set ret;
+	Set ret;
 
-    for (uint32_t k = 0; k < count; k++) {
-        if (this->bitmap.find(k) != this->bitmap.end()) {
-            ret.bitmap.erase(k);
-        } else {
-            ret.bitmap.insert(k);
-        }
-    }
+	for (uint32_t k = 0; k < count; k++) {
+		if (this->bitmap.find(k) != this->bitmap.end()) {
+			ret.bitmap.erase(k);
+		} else {
+			ret.bitmap.insert(k);
+		}
+	}
 
-    ret.count = count;
+	ret.count = count;
 
-    return ret;
+	return ret;
 }
 
 /*
-    比较运算
+	比较运算
 */
 bool Set::operator==(Set & val)
 {
-    return this->bitmap == val.bitmap;
+	return this->bitmap == val.bitmap;
 }
 
 /*
-    比较运算
+	比较运算
 */
 bool Set::operator!=(Set & val)
 {
-    return this->bitmap != val.bitmap;
+	return this->bitmap != val.bitmap;
 }
 
 ///
@@ -178,15 +182,15 @@ bool Set::operator!=(Set & val)
 ///
 bool Set::get(uint32_t n)
 {
-    return bitmap.find(n) != bitmap.end();
+	return bitmap.find(n) != bitmap.end();
 }
 
 /*
-    置位运算
+	置位运算
 */
 void Set::set(uint32_t i)
 {
-    bitmap.insert(i);
+	bitmap.insert(i);
 }
 
 ///
@@ -195,7 +199,7 @@ void Set::set(uint32_t i)
 ///
 void Set::reset(uint32_t n)
 {
-    bitmap.erase(n);
+	bitmap.erase(n);
 }
 
 ///
@@ -204,7 +208,7 @@ void Set::reset(uint32_t n)
 ///
 uint32_t Set::max()
 {
-    return *std::max_element(this->bitmap.begin(), this->bitmap.end());
+	return *std::max_element(this->bitmap.begin(), this->bitmap.end());
 }
 
 ///
@@ -213,24 +217,24 @@ uint32_t Set::max()
 ///
 uint32_t Set::min()
 {
-    return *std::min_element(this->bitmap.begin(), this->bitmap.end());
+	return *std::min_element(this->bitmap.begin(), this->bitmap.end());
 }
 
 /*
-    调试输出函数
+	调试输出函数
 */
 std::string Set::toString()
 {
-    std::stringstream striostream;
+	std::stringstream striostream;
 
-    for (auto & el: bitmap) {
-        striostream << el << " ";
-    }
+	for (auto & el: bitmap) {
+		striostream << el << " ";
+	}
 
-    return striostream.str();
+	return striostream.str();
 }
 
 bool Set::empty()
 {
-    return bitmap.empty();
+	return bitmap.empty();
 }

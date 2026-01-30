@@ -24,5 +24,5 @@
 LabelType * LabelType::getType()
 {
 	static LabelType * oneInstance = new LabelType();
-    return oneInstance;
+	return oneInstance;
 }
