@@ -61,6 +61,15 @@ public:
 	[[nodiscard]] virtual std::string getName() const;
 
 	///
+	/// @brief 返回所有使用这个Value 的 Use 边
+	/// @return const std::vector<Use *>&
+	///
+	[[nodiscard]] const std::vector<Use *> & getUseList() const
+	{
+		return uses;
+	}
+
+	///
 	/// @brief 设置名字
 	/// @param _name 名字
 	///
@@ -91,6 +100,17 @@ public:
 	/// @param use
 	///
 	void removeUse(Use * use);
+
+	///
+	/// @brief 删除所有边，减少Value被使用次数
+	///
+	void removeUses();
+
+	///
+	/// @brief 用新值替换所有使用该Value的指令中的操作数
+	/// @param new_val
+	///
+	void replaceAllUseWith(Value * new_val);
 
 	///
 	/// @brief 取得变量所在的作用域层级

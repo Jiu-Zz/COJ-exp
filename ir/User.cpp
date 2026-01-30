@@ -72,6 +72,16 @@ void User::removeOperand(Value * val)
 }
 
 ///
+/// @brief 清除指定的Use，并销毁use
+/// @param val 操作指定的操作数
+///
+void User::removeOperand(Use * use)
+{
+	removeUse(use);
+	delete use;
+}
+
+///
 /// @brief 清除指定的操作数
 /// @param pos 操作数的索引
 ///
@@ -143,6 +153,7 @@ std::vector<Use *> & User::getOperands()
 std::vector<Value *> User::getOperandsValue()
 {
 	std::vector<Value *> operandsVec;
+	operandsVec.reserve(operands.size());
 	for (auto & use: operands) {
 		operandsVec.emplace_back(use->getUsee());
 	}
@@ -170,4 +181,35 @@ Value * User::getOperand(int32_t pos)
 	}
 
 	return nullptr;
+}
+
+///
+/// @brief 交换操作数，只对两个操作数的User有效
+///
+void User::swapTwoOperands()
+{
+	if (operands.size() == 2) {
+		auto leftOperand = operands[0];
+		auto rightOperand = operands[1];
+
+		operands.clear();
+
+		operands.push_back(rightOperand);
+		operands.push_back(leftOperand);
+	}
+}
+
+///
+/// @brief 替换操作数
+/// @param val 旧操作数
+/// @param newVal 新操作数
+///
+void User::replaceOperand(Value * val, Value * newVal)
+{
+	for (auto & use: operands) {
+		if (use->getUsee() == val) {
+			use->setUsee(newVal);
+			break;
+		}
+	}
 }

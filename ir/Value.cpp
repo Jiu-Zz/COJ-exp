@@ -19,6 +19,7 @@
 
 #include "Value.h"
 #include "Use.h"
+#include "User.h"
 
 /// @brief 构造函数
 /// @param _type
@@ -94,6 +95,23 @@ void Value::removeUse(Use * use)
 }
 
 ///
+/// @brief 删除所有边，减少Value被使用次数
+///
+void Value::removeUses()
+{
+	for (int32_t pos = 0; pos < (int32_t) uses.size();) {
+
+		// 必须先暂存后释放，不能直接delete uses[pos]
+		// 这是因为use->remove会删除operands的元素，
+		// 使得operands[pos]的对象不再是原来的对象
+
+		Use * use = uses[pos];
+		use->remove();
+		delete use;
+	}
+}
+
+///
 /// @brief 取得变量所在的作用域层级
 /// @return int32_t 层级
 ///
@@ -141,4 +159,27 @@ int32_t Value::getLoadRegId()
 void Value::setLoadRegId(int32_t regId)
 {
 	(void) regId;
+}
+
+///
+/// @brief 用新值替换所有使用该Value的指令中的操作数
+/// @param new_val
+///
+void Value::replaceAllUseWith(Value * new_val)
+{
+	// 创建uses的副本，因为replaceAllUseWith会修改uses列表
+	std::vector<Use *> uses_copy = uses;
+
+	for (auto use: uses_copy) {
+		auto user = dynamic_cast<User *>(use->getUser());
+		if (user) {
+			// 找到这个use在user中的索引位置
+			for (int i = 0; i < user->getOperandsNum(); i++) {
+				if (user->getOperand(i) == this) {
+					user->setOperand(i, new_val);
+					break;
+				}
+			}
+		}
+	}
 }

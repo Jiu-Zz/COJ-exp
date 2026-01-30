@@ -96,6 +96,12 @@ public:
 	void removeOperand(Value * val);
 
 	///
+	/// @brief 清除指定的Use
+	/// @param val 操作指定的操作数
+	///
+	void removeOperand(Use * val);
+
+	///
 	/// @brief 直接清除操作数的元素
 	/// @param use 指定的元素use
 	///
@@ -111,4 +117,16 @@ public:
 	/// @brief 清除所有的操作数
 	///
 	void clearOperands();
+
+	///
+	/// @brief 交换操作数，只对两个操作数的User有效
+	///
+	void swapTwoOperands();
+
+	///
+	/// @brief 替换操作数
+	/// @param val 旧操作数
+	/// @param newVal 新操作数
+	///
+	void replaceOperand(Value * val, Value * newVal);
 };
