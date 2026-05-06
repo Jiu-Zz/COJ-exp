@@ -47,6 +47,10 @@ InstSelectorArm32::InstSelectorArm32(
 
 	translator_handlers[IRInstOperator::IRINST_OP_ADD_I] = &InstSelectorArm32::translate_add_int32;
 	translator_handlers[IRInstOperator::IRINST_OP_SUB_I] = &InstSelectorArm32::translate_sub_int32;
+	translator_handlers[IRInstOperator::IRINST_OP_MUL_I] = &InstSelectorArm32::translate_mul_int32;
+	translator_handlers[IRInstOperator::IRINST_OP_DIV_I] = &InstSelectorArm32::translate_div_int32;
+	translator_handlers[IRInstOperator::IRINST_OP_MOD_I] = &InstSelectorArm32::translate_mod_int32;
+	translator_handlers[IRInstOperator::IRINST_OP_NEG] = &InstSelectorArm32::translate_neg_int32;
 
 	translator_handlers[IRInstOperator::IRINST_OP_FUNC_CALL] = &InstSelectorArm32::translate_call;
 	translator_handlers[IRInstOperator::IRINST_OP_ARG] = &InstSelectorArm32::translate_arg;
@@ -300,6 +304,136 @@ void InstSelectorArm32::translate_add_int32(Instruction * inst)
 void InstSelectorArm32::translate_sub_int32(Instruction * inst)
 {
 	translate_two_operator(inst, "sub");
+}
+
+/// @brief 整数乘法指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_mul_int32(Instruction * inst)
+{
+	translate_two_operator(inst, "mul");
+}
+
+/// @brief 整数除法指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_div_int32(Instruction * inst)
+{
+	translate_two_operator(inst, "sdiv");
+}
+
+/// @brief 整数模运算指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_mod_int32(Instruction * inst)
+{
+	Value * result = inst;
+	Value * arg1 = inst->getOperand(0);
+	Value * arg2 = inst->getOperand(1);
+
+	int32_t r1, r2;
+	bool needFree1 = false;
+	bool needFree2 = false;
+
+	// arg1
+	if (arg1->getRegId() == -1) {
+		r1 = simpleRegisterAllocator.Allocate(arg1);
+		iloc.load_var(r1, arg1);
+		needFree1 = true;
+	} else {
+		r1 = arg1->getRegId();
+	}
+
+	// arg2
+	if (arg2->getRegId() == -1) {
+		r2 = simpleRegisterAllocator.Allocate(arg2);
+		iloc.load_var(r2, arg2);
+		needFree2 = true;
+	} else {
+		r2 = arg2->getRegId();
+	}
+
+	// 中间寄存器
+	int32_t r_div = simpleRegisterAllocator.Allocate(); // a / b
+	int32_t r_mul = simpleRegisterAllocator.Allocate(); // (a/b) * b
+
+	// 结果寄存器
+	int32_t r_res;
+	bool needFreeRes = false;
+
+	if (result->getRegId() == -1) {
+		r_res = simpleRegisterAllocator.Allocate(result);
+		needFreeRes = true;
+	} else {
+		r_res = result->getRegId();
+	}
+
+	// r_div = r1 / r2
+	iloc.inst("sdiv", PlatformArm32::regName[r_div], PlatformArm32::regName[r1], PlatformArm32::regName[r2]);
+
+	// r_mul = r_div * r2
+	iloc.inst("mul", PlatformArm32::regName[r_mul], PlatformArm32::regName[r_div], PlatformArm32::regName[r2]);
+
+	// r_res = r1 - r_mul
+	iloc.inst("sub", PlatformArm32::regName[r_res], PlatformArm32::regName[r1], PlatformArm32::regName[r_mul]);
+
+	// 如果结果在内存，需要写回
+	if (result->getRegId() == -1) {
+		iloc.store_var(r_res, result, ARM32_TMP_REG_NO);
+	}
+
+	// 释放寄存器（只释放自己申请的）
+	if (needFree1) {
+		simpleRegisterAllocator.free(r1);
+	}
+	if (needFree2) {
+		simpleRegisterAllocator.free(r2);
+	}
+
+	simpleRegisterAllocator.free(r_div);
+	simpleRegisterAllocator.free(r_mul);
+
+	if (needFreeRes) {
+		simpleRegisterAllocator.free(r_res);
+	}
+}
+
+/// @brief 整数取负指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_neg_int32(Instruction * inst)
+{
+	Value * result = inst;
+	Value * arg1 = inst->getOperand(0);
+
+	int32_t r_src, r_res;
+	bool needFreeSrc = false;
+	bool needFreeRes = false;
+
+	// src
+	if (arg1->getRegId() == -1) {
+		r_src = simpleRegisterAllocator.Allocate(arg1);
+		iloc.load_var(r_src, arg1);
+		needFreeSrc = true;
+	} else {
+		r_src = arg1->getRegId();
+	}
+
+	// result
+	if (result->getRegId() == -1) {
+		r_res = simpleRegisterAllocator.Allocate(result);
+		needFreeRes = true;
+	} else {
+		r_res = result->getRegId();
+	}
+
+	// r_res = 0 - r_src
+	iloc.inst("rsb", PlatformArm32::regName[r_res], PlatformArm32::regName[r_src], "#0");
+
+	if (result->getRegId() == -1) {
+		iloc.store_var(r_res, result, ARM32_TMP_REG_NO);
+	}
+
+	if (needFreeSrc)
+		simpleRegisterAllocator.free(r_src);
+	if (needFreeRes)
+		simpleRegisterAllocator.free(r_res);
 }
 
 /// @brief 函数调用指令翻译成ARM32汇编

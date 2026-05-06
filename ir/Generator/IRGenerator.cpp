@@ -47,6 +47,9 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
 	/* 表达式运算， 加减 */
 	ast2ir_handlers[ast_operator_type::AST_OP_SUB] = &IRGenerator::ir_sub;
 	ast2ir_handlers[ast_operator_type::AST_OP_ADD] = &IRGenerator::ir_add;
+	ast2ir_handlers[ast_operator_type::AST_OP_MUL] = &IRGenerator::ir_mul;
+	ast2ir_handlers[ast_operator_type::AST_OP_DIV] = &IRGenerator::ir_div;
+	ast2ir_handlers[ast_operator_type::AST_OP_MOD] = &IRGenerator::ir_mod;
 
 	/* 语句 */
 	ast2ir_handlers[ast_operator_type::AST_OP_ASSIGN] = &IRGenerator::ir_assign;
@@ -463,6 +466,85 @@ bool IRGenerator::ir_sub(ast_node * node)
 	node->blockInsts.addInst(subInst);
 
 	node->val = subInst;
+
+	return true;
+}
+
+/// @brief 整数乘法AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_mul(ast_node * node)
+{
+	auto left = ir_visit_ast_node(node->sons[0]);
+	auto right = ir_visit_ast_node(node->sons[1]);
+
+	if (!left || !right)
+		return false;
+
+	auto inst = new BinaryInstruction(
+		module->getCurrentFunction(),
+		IRInstOperator::IRINST_OP_MUL_I,
+		left->val,
+		right->val,
+		IntegerType::getTypeInt());
+
+	node->blockInsts.addInst(left->blockInsts);
+	node->blockInsts.addInst(right->blockInsts);
+	node->blockInsts.addInst(inst);
+
+	node->val = inst;
+	return true;
+}
+
+/// @brief 整数除法AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_div(ast_node * node)
+{
+	auto left = ir_visit_ast_node(node->sons[0]);
+	auto right = ir_visit_ast_node(node->sons[1]);
+
+	if (!left || !right)
+		return false;
+
+	auto inst = new BinaryInstruction(
+		module->getCurrentFunction(),
+		IRInstOperator::IRINST_OP_DIV_I,
+		left->val,
+		right->val,
+		IntegerType::getTypeInt());
+
+	node->blockInsts.addInst(left->blockInsts);
+	node->blockInsts.addInst(right->blockInsts);
+	node->blockInsts.addInst(inst);
+
+	node->val = inst;
+	return true;
+}
+
+/// @brief 整数模运算AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_mod(ast_node * node)
+{
+	auto left = ir_visit_ast_node(node->sons[0]);
+	auto right = ir_visit_ast_node(node->sons[1]);
+
+	if (!left || !right)
+		return false;
+
+	auto inst = new BinaryInstruction(
+		module->getCurrentFunction(),
+		IRInstOperator::IRINST_OP_MOD_I,
+		left->val,
+		right->val,
+		IntegerType::getTypeInt());
+
+	node->blockInsts.addInst(left->blockInsts);
+	node->blockInsts.addInst(right->blockInsts);
+	node->blockInsts.addInst(inst);
+
+	node->val = inst;
 
 	return true;
 }

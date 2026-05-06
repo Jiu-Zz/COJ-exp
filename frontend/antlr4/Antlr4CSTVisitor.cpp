@@ -221,12 +221,12 @@ std::any MiniCCSTVisitor::visitBlockStatement(MiniCParser::BlockStatementContext
 
 std::any MiniCCSTVisitor::visitAddExp(MiniCParser::AddExpContext * ctx)
 {
-	// 识别的文法产生式：addExp : unaryExp (addOp unaryExp)*;
+	// 识别的文法产生式：addExp : mulExp (addOp mulExp)*;
 
 	if (ctx->addOp().empty()) {
 
-		// 没有addOp运算符，则说明闭包识别为0，只识别了第一个非终结符unaryExp
-		return visitUnaryExp(ctx->unaryExp()[0]);
+		// 没有addOp运算符，则说明闭包识别为0，只识别了第一个非终结符mulExp
+		return visitMulExp(ctx->mulExp()[0]);
 	}
 
 	ast_node *left, *right;
@@ -243,11 +243,11 @@ std::any MiniCCSTVisitor::visitAddExp(MiniCParser::AddExpContext * ctx)
 		if (k == 0) {
 
 			// 左操作数
-			left = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k]));
+			left = std::any_cast<ast_node *>(visitMulExp(ctx->mulExp()[k]));
 		}
 
 		// 右操作数
-		right = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k + 1]));
+		right = std::any_cast<ast_node *>(visitMulExp(ctx->mulExp()[k + 1]));
 
 		// 新建结点作为下一个运算符的右操作符
 		left = ast_node::New(op, left, right);
@@ -269,9 +269,59 @@ std::any MiniCCSTVisitor::visitAddOp(MiniCParser::AddOpContext * ctx)
 	}
 }
 
+std::any MiniCCSTVisitor::visitMulExp(MiniCParser::MulExpContext * ctx)
+{
+	// 识别的文法产生式：mulExp : unaryExp (mulOp unaryExp)*;
+
+	if (ctx->mulOp().empty()) {
+
+		// 没有mulOp运算符，则说明闭包识别为0，只识别了第一个非终结符unaryExp
+		return visitUnaryExp(ctx->unaryExp()[0]);
+	}
+
+	ast_node *left, *right;
+
+	// 存在mulOp运算符，自
+	auto opsCtxVec = ctx->mulOp();
+
+	// 有操作符，肯定会进循环，使得right设置正确的值
+	for (int k = 0; k < (int) opsCtxVec.size(); k++) {
+
+		// 获取运算符
+		ast_operator_type op = std::any_cast<ast_operator_type>(visitMulOp(opsCtxVec[k]));
+
+		if (k == 0) {
+
+			// 左操作数
+			left = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k]));
+		}
+
+		// 右操作数
+		right = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k + 1]));
+
+		// 新建结点作为下一个运算符的右操作符
+		left = ast_node::New(op, left, right);
+	}
+
+	return left;
+}
+
+std::any MiniCCSTVisitor::visitMulOp(MiniCParser::MulOpContext * ctx)
+{
+	// 识别的文法产生式：mulOp : T_MUL | T_DIV | T_MOD
+
+	if (ctx->T_MUL()) {
+		return ast_operator_type::AST_OP_MUL;
+	} else if (ctx->T_DIV()) {
+		return ast_operator_type::AST_OP_DIV;
+	} else {
+		return ast_operator_type::AST_OP_MOD;
+	}
+}
+
 std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 {
-	// 识别文法产生式：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN;
+	// 识别文法产生式：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN | T_SUB unaryExp;
 
 	if (ctx->primaryExp()) {
 		// 普通表达式
@@ -292,6 +342,10 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 
 		// 创建函数调用节点，其孩子为被调用函数名和实参，
 		return ast_node::create_func_call(funcname_node, paramListNode);
+	} else if (ctx->T_SUB()) {
+		// 单目减运算符
+		auto unaryNode = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()));
+		return ast_node::New(ast_operator_type::AST_OP_SUB, nullptr, unaryNode);
 	} else {
 		return nullptr;
 	}
@@ -299,16 +353,16 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 
 std::any MiniCCSTVisitor::visitPrimaryExp(MiniCParser::PrimaryExpContext * ctx)
 {
-	// 识别文法产生式 primaryExp: T_L_PAREN expr T_R_PAREN | T_DIGIT | lVal;
+	// 识别文法产生式 primaryExp: T_L_PAREN expr T_R_PAREN | T_CONST | lVal;
 
 	ast_node * node = nullptr;
 
-	if (ctx->T_DIGIT()) {
+	if (ctx->T_CONST()) {
 		// 无符号整型字面量
 		// 识别 primaryExp: T_DIGIT
 
-		uint32_t val = (uint32_t) stoull(ctx->T_DIGIT()->getText(), nullptr, 0);
-		int64_t lineNo = (int64_t) ctx->T_DIGIT()->getSymbol()->getLine();
+		uint32_t val = (uint32_t) stoull(ctx->T_CONST()->getText(), nullptr, 0);
+		int64_t lineNo = (int64_t) ctx->T_CONST()->getSymbol()->getLine();
 		node = ast_node::New(digit_int_attr{val, lineNo});
 	} else if (ctx->lVal()) {
 		// 具有左值的表达式
