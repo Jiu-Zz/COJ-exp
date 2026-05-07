@@ -98,3 +98,6 @@ T_CONST: '0' [xX] [0-9a-fA-F]+ | '0' [0-7]* | [1-9] [0-9]*;
 
 /* 空白符丢弃 */
 WS: [ \r\n\t]+ -> skip;
+
+LINE_COMMENT: '//' ~[\r\n]* -> skip;
+BLOCK_COMMENT: '/*' .*? '*/' -> skip;

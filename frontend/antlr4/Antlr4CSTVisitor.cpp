@@ -249,7 +249,7 @@ std::any MiniCCSTVisitor::visitAddExp(MiniCParser::AddExpContext * ctx)
 		// 右操作数
 		right = std::any_cast<ast_node *>(visitMulExp(ctx->mulExp()[k + 1]));
 
-		// 新建结点作为下一个运算符的右操作符
+		// 新建结点作为下一个运算符的左操作符
 		left = ast_node::New(op, left, right);
 	}
 
@@ -299,7 +299,7 @@ std::any MiniCCSTVisitor::visitMulExp(MiniCParser::MulExpContext * ctx)
 		// 右操作数
 		right = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k + 1]));
 
-		// 新建结点作为下一个运算符的右操作符
+		// 新建结点作为下一个运算符的左操作符
 		left = ast_node::New(op, left, right);
 	}
 
@@ -309,7 +309,6 @@ std::any MiniCCSTVisitor::visitMulExp(MiniCParser::MulExpContext * ctx)
 std::any MiniCCSTVisitor::visitMulOp(MiniCParser::MulOpContext * ctx)
 {
 	// 识别的文法产生式：mulOp : T_MUL | T_DIV | T_MOD
-
 	if (ctx->T_MUL()) {
 		return ast_operator_type::AST_OP_MUL;
 	} else if (ctx->T_DIV()) {
@@ -345,7 +344,7 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 	} else if (ctx->T_SUB()) {
 		// 单目减运算符
 		auto unaryNode = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()));
-		return ast_node::New(ast_operator_type::AST_OP_SUB, nullptr, unaryNode);
+		return ast_node::New(ast_operator_type::AST_OP_NEG, nullptr, unaryNode);
 	} else {
 		return nullptr;
 	}

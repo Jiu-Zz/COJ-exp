@@ -50,6 +50,7 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
 	ast2ir_handlers[ast_operator_type::AST_OP_MUL] = &IRGenerator::ir_mul;
 	ast2ir_handlers[ast_operator_type::AST_OP_DIV] = &IRGenerator::ir_div;
 	ast2ir_handlers[ast_operator_type::AST_OP_MOD] = &IRGenerator::ir_mod;
+	ast2ir_handlers[ast_operator_type::AST_OP_NEG] = &IRGenerator::ir_neg;
 
 	/* 语句 */
 	ast2ir_handlers[ast_operator_type::AST_OP_ASSIGN] = &IRGenerator::ir_assign;
@@ -87,6 +88,21 @@ bool IRGenerator::run()
 	return node != nullptr;
 }
 
+// bool IRGenerator::run()
+// {
+// 	std::cout << "[IR] start generating IR..." << std::endl;
+
+// 	ast_node * node = ir_visit_ast_node(root);
+
+// 	if (!node) {
+// 		std::cerr << "[IR FATAL] IR generation failed at root traversal" << std::endl;
+// 		return false;
+// 	}
+
+// 	std::cout << "[IR] success" << std::endl;
+// 	return true;
+// }
+
 /// @brief 根据AST的节点运算符查找对应的翻译函数并执行翻译动作
 /// @param node AST节点
 /// @return 成功返回node节点，否则返回nullptr
@@ -115,6 +131,37 @@ ast_node * IRGenerator::ir_visit_ast_node(ast_node * node)
 
 	return node;
 }
+
+// ast_node * IRGenerator::ir_visit_ast_node(ast_node * node)
+// {
+// 	if (nullptr == node) {
+// 		return nullptr;
+// 	}
+
+// 	bool result;
+
+// 	auto it = ast2ir_handlers.find(node->node_type);
+
+// 	if (it == ast2ir_handlers.end()) {
+
+// 		std::cerr << "[IR ERROR] unsupported AST node type = " << (int) node->node_type << " line = " << node->line_no
+// 				  << std::endl;
+
+// 		result = this->ir_default(node);
+// 	} else {
+// 		result = (this->*(it->second))(node);
+// 	}
+
+// 	if (!result) {
+
+// 		std::cerr << "[IR FAILED] node type = " << (int) node->node_type << " line = " << node->line_no
+// 				  << " name = " << node->name << std::endl;
+
+// 		return nullptr;
+// 	}
+
+// 	return node;
+// }
 
 /// @brief 未知节点类型的节点处理
 /// @param node AST节点
@@ -480,7 +527,6 @@ bool IRGenerator::ir_mul(ast_node * node)
 
 	if (!left || !right)
 		return false;
-
 	auto inst = new BinaryInstruction(
 		module->getCurrentFunction(),
 		IRInstOperator::IRINST_OP_MUL_I,
@@ -542,6 +588,30 @@ bool IRGenerator::ir_mod(ast_node * node)
 
 	node->blockInsts.addInst(left->blockInsts);
 	node->blockInsts.addInst(right->blockInsts);
+	node->blockInsts.addInst(inst);
+
+	node->val = inst;
+
+	return true;
+}
+
+/// @brief 整数取负AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_neg(ast_node * node)
+{
+	auto operand = ir_visit_ast_node(node->sons[0]);
+	if (!operand)
+		return false;
+
+	// 常量 0
+	auto zero = module->newConstInt(0);
+
+	// 生成 0 - operand
+	auto inst = new BinaryInstruction(
+		module->getCurrentFunction(), IRInstOperator::IRINST_OP_SUB_I, zero, operand->val, IntegerType::getTypeInt());
+
+	node->blockInsts.addInst(operand->blockInsts);
 	node->blockInsts.addInst(inst);
 
 	node->val = inst;
