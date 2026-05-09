@@ -23,6 +23,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitFuncType(MiniCParser::FuncTypeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitBlock(MiniCParser::BlockContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -40,6 +44,14 @@ public:
   }
 
   virtual std::any visitBasicType(MiniCParser::BasicTypeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitFuncFParams(MiniCParser::FuncFParamsContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitFuncFParam(MiniCParser::FuncFParamContext *ctx) override {
     return visitChildren(ctx);
   }
 

@@ -17,6 +17,7 @@
 
 #include "ScopeStack.h"
 #include "Common.h"
+#include "PointerType.h"
 #include "VoidType.h"
 
 Module::Module(std::string _name) : name(_name)
@@ -27,10 +28,22 @@ Module::Module(std::string _name) : name(_name)
 	// 确保全局变量作用域入栈，这样全局变量才可以加入
 	scopeStack->enterScope();
 
-	// 加入内置函数putint
+	// 加入内置函数
 	(void) newFunction("putint", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
 	(void) newFunction("putch", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
 	(void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
+	(void) newFunction("getch", IntegerType::getTypeInt(), {}, true);
+	(void) newFunction(
+		"getarray",
+		IntegerType::getTypeInt(),
+		{new FormalParam{const_cast<Type *>(static_cast<const Type *>(PointerType::get(IntegerType::getTypeInt()))), ""}},
+		true);
+	(void) newFunction(
+		"putarray",
+		VoidType::getType(),
+		{new FormalParam{IntegerType::getTypeInt(), ""},
+		 new FormalParam{const_cast<Type *>(static_cast<const Type *>(PointerType::get(IntegerType::getTypeInt()))), ""}},
+		true);
 }
 
 /// @brief 进入作用域，如进入函数体块、语句块等
@@ -79,7 +92,8 @@ Function * Module::newFunction(std::string name, Type * returnType, std::vector<
 	}
 
 	// 根据形参创建形参类型清单
-	std::vector<Type *> paramsType(params.size());
+	std::vector<Type *> paramsType;
+	paramsType.reserve(params.size());
 
 	for (auto & param: params) {
 		paramsType.push_back(param->getType());

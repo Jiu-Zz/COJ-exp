@@ -52,6 +52,7 @@ ast_node * get_ast_root()
 
 // 关键或保留字 一词一类 不需要赋予语义属性
 %token T_RETURN T_IF T_ELSE T_WHILE T_BREAK T_CONTINUE
+%token <type> T_VOID
 
 // 分隔符 一词一类 不需要赋予语义属性
 %token T_SEMICOLON T_L_PAREN T_R_PAREN T_L_BRACE T_R_BRACE
@@ -68,6 +69,9 @@ ast_node * get_ast_root()
 // %type指定文法的非终结符号，<>可指定文法属性
 %type <node> CompileUnit
 %type <node> FuncDef
+%type <node> TopLevelItem
+%type <node> FuncFParams
+%type <node> FuncFParam
 %type <node> Block
 %type <node> BlockItemList
 %type <node> BlockItem
@@ -84,9 +88,8 @@ ast_node * get_ast_root()
 
 // 编译单元可包含若干个函数与全局变量定义。要在语义分析时检查main函数存在
 // compileUnit: (funcDef | varDecl)* EOF;
-// bison不支持闭包运算，为便于追加修改成左递归方式
-// compileUnit: funcDef | varDecl | compileUnit funcDef | compileUnit varDecl
-CompileUnit : FuncDef {
+// bison不支持闭包运算，因此拆成列表项，避免顶层声明/函数混排时产生歧义
+CompileUnit : TopLevelItem {
 
 		// 创建一个编译单元的节点AST_OP_COMPILE_UNIT
 		$$ = ast_node::New(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
@@ -94,25 +97,23 @@ CompileUnit : FuncDef {
 		// 设置到全局变量中
 		ast_root = $$;
 	}
-	| VarDecl {
-
-		// 创建一个编译单元的节点AST_OP_COMPILE_UNIT
-		$$ = ast_node::New(ast_operator_type::AST_OP_COMPILE_UNIT, $1);
-		ast_root = $$;
-	}
-	| CompileUnit FuncDef {
+	| CompileUnit TopLevelItem {
 
 		// 把函数定义的节点作为编译单元的孩子
 		$$ = $1->insert_son_node($2);
 	}
-	| CompileUnit VarDecl {
-		// 把变量定义的节点作为编译单元的孩子
-		$$ = $1->insert_son_node($2);
+	;
+
+TopLevelItem : FuncDef {
+		$$ = $1;
+	}
+	| VarDecl {
+		$$ = $1;
 	}
 	;
 
-// 函数定义，目前支持整数返回类型，不支持形参
-FuncDef : BasicType T_ID T_L_PAREN T_R_PAREN Block  {
+// 函数定义，支持多个形参以及int/void返回类型
+FuncDef : T_INT T_ID T_L_PAREN T_R_PAREN Block  {
 
 		// 函数返回类型
 		type_attr funcReturnType = $1;
@@ -129,6 +130,76 @@ FuncDef : BasicType T_ID T_L_PAREN T_R_PAREN Block  {
 		// 创建函数定义的节点，孩子有类型，函数名，语句块和形参(实际上无)
 		// create_func_def函数内会释放funcId中指向的标识符空间，切记，之后不要再释放，之前一定要是通过strdup函数或者malloc分配的空间
 		$$ = ast_node::create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
+	}
+	| T_INT T_ID T_L_PAREN FuncFParams T_R_PAREN Block  {
+
+		// 函数返回类型
+		type_attr funcReturnType = $1;
+
+		// 函数名
+		var_id_attr funcId = $2;
+
+		// 函数体节点即Block，即$6
+		ast_node * blockNode = $6;
+
+		// 形参列表
+		ast_node * formalParamsNode = $4;
+
+		// 创建函数定义的节点，孩子有类型，函数名，语句块和形参
+		$$ = ast_node::create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
+	}
+	| T_VOID T_ID T_L_PAREN T_R_PAREN Block  {
+
+		// 函数返回类型
+		type_attr funcReturnType = $1;
+
+		// 函数名
+		var_id_attr funcId = $2;
+
+		// 函数体节点即Block，即$5
+		ast_node * blockNode = $5;
+
+		// 形参结点没有，设置为空指针
+		ast_node * formalParamsNode = nullptr;
+
+		// 创建函数定义的节点，孩子有类型，函数名，语句块和形参(实际上无)
+		// create_func_def函数内会释放funcId中指向的标识符空间，切记，之后不要再释放，之前一定要是通过strdup函数或者malloc分配的空间
+		$$ = ast_node::create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
+	}
+	| T_VOID T_ID T_L_PAREN FuncFParams T_R_PAREN Block  {
+
+		// 函数返回类型
+		type_attr funcReturnType = $1;
+
+		// 函数名
+		var_id_attr funcId = $2;
+
+		// 函数体节点即Block，即$6
+		ast_node * blockNode = $6;
+
+		// 形参列表
+		ast_node * formalParamsNode = $4;
+
+		// 创建函数定义的节点，孩子有类型，函数名，语句块和形参
+		$$ = ast_node::create_func_def(funcReturnType, funcId, blockNode, formalParamsNode);
+	}
+	;
+
+// 函数形参列表
+FuncFParams : FuncFParam {
+		$$ = ast_node::New(ast_operator_type::AST_OP_FUNC_FORMAL_PARAMS, $1);
+	}
+	| FuncFParams T_COMMA FuncFParam {
+		$$ = $1->insert_son_node($3);
+	}
+	;
+
+// 函数形参
+FuncFParam : BasicType T_ID {
+		ast_node * paramNode = ast_node::create_func_formal_param($2.lineno, $2.id);
+		paramNode->type = ast_node::typeAttr2Type($1);
+		$$ = paramNode;
+		free($2.id);
 	}
 	;
 
@@ -187,7 +258,7 @@ VarDecl : VarDeclExpr T_SEMICOLON {
 	;
 
 // 变量声明表达式，可支持逗号分隔定义多个
-VarDeclExpr: BasicType VarDef {
+VarDeclExpr: T_INT VarDef {
 
 		// 创建类型节点
 		ast_node * type_node = ast_node::create_type_node($1);
@@ -229,11 +300,15 @@ BasicType: T_INT {
 	}
 	;
 
-// 语句文法：statement:T_RETURN expr T_SEMICOLON | lVal T_ASSIGN expr T_SEMICOLON
+// 语句文法：statement:T_RETURN expr? T_SEMICOLON | lVal T_ASSIGN expr T_SEMICOLON
 // | block | expr? T_SEMICOLON
 // 支持返回语句、赋值语句、语句块、表达式语句
 // 其中表达式语句可支持空语句，由于bison不支持?，修改成两条
-Statement : T_RETURN Expr T_SEMICOLON {
+Statement : T_RETURN T_SEMICOLON {
+		// 空返回语句
+		$$ = ast_node::New(ast_operator_type::AST_OP_RETURN);
+	}
+	| T_RETURN Expr T_SEMICOLON {
 		// 返回语句
 
 		// 创建返回节点AST_OP_RETURN，其孩子为Expr，即$2
@@ -345,12 +420,6 @@ AddExp : MulExp {
 		// 直接传递到归约后的节点
 		$$ = $1;
 	}
-	| MulExp AddOp MulExp {
-		// 两个一目表达式的加减运算
-
-		// 创建加减运算节点，其孩子为两个一目表达式节点
-		$$ = ast_node::New(ast_operator_type($2), $1, $3);
-	}
 	| AddExp AddOp MulExp {
 		// 左递归形式可通过加减连接多个一元表达式
 
@@ -365,9 +434,6 @@ AddExp : MulExp {
 // mulExp : unaryExp | unaryExp mulOp unaryExp | mulExp mulOp unaryExp
 MulExp : UnaryExp {
 		$$ = $1;
-	}
-	| UnaryExp MulOp UnaryExp {
-		$$ = ast_node::New(ast_operator_type($2), $1, $3);
 	}
 	| MulExp MulOp UnaryExp {
 		$$ = ast_node::New(ast_operator_type($2), $1, $3);

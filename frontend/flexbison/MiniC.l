@@ -87,6 +87,13 @@
                 return T_INT;
             }
 
+"void"      {
+                // void关键字
+                yylval.type.type = BasicType::TYPE_VOID;
+                yylval.type.lineno = yylineno;
+                return T_VOID;
+            }
+
 "return"    {
                 // return关键字 关键字的识别要在标识符识别的前边，，这是因为关键字也是标识符，不过是保留的
                 return T_RETURN;

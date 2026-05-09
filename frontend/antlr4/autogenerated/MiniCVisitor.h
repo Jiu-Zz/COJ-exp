@@ -23,6 +23,8 @@ public:
 
     virtual std::any visitFuncDef(MiniCParser::FuncDefContext *context) = 0;
 
+    virtual std::any visitFuncType(MiniCParser::FuncTypeContext *context) = 0;
+
     virtual std::any visitBlock(MiniCParser::BlockContext *context) = 0;
 
     virtual std::any visitBlockItemList(MiniCParser::BlockItemListContext *context) = 0;
@@ -32,6 +34,10 @@ public:
     virtual std::any visitVarDecl(MiniCParser::VarDeclContext *context) = 0;
 
     virtual std::any visitBasicType(MiniCParser::BasicTypeContext *context) = 0;
+
+    virtual std::any visitFuncFParams(MiniCParser::FuncFParamsContext *context) = 0;
+
+    virtual std::any visitFuncFParam(MiniCParser::FuncFParamContext *context) = 0;
 
     virtual std::any visitVarDef(MiniCParser::VarDefContext *context) = 0;
 

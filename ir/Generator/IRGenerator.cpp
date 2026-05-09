@@ -35,6 +35,35 @@
 #include "MoveInstruction.h"
 #include "GotoInstruction.h"
 
+namespace {
+
+Function * registerFunctionSignature(Module * module, ast_node * node)
+{
+	if (!module || !node || node->node_type != ast_operator_type::AST_OP_FUNC_DEF) {
+		return nullptr;
+	}
+
+	ast_node * typeNode = node->sons[0];
+	ast_node * nameNode = node->sons[1];
+	ast_node * paramsNode = node->sons[2];
+
+	std::vector<FormalParam *> params;
+	if (paramsNode) {
+		for (auto paramNode: paramsNode->sons) {
+			if (!paramNode) {
+				continue;
+			}
+
+			auto * param = new FormalParam(paramNode->type, paramNode->name);
+			params.push_back(param);
+		}
+	}
+
+	return module->newFunction(nameNode->name, typeNode->type, params, false);
+}
+
+} // namespace
+
 /// @brief 构造函数
 /// @param _root AST的根
 /// @param _module 符号表
@@ -195,6 +224,14 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
 	module->setCurrentFunction(nullptr);
 
 	for (auto son: node->sons) {
+		if (son && son->node_type == ast_operator_type::AST_OP_FUNC_DEF) {
+			if (!registerFunctionSignature(module, son)) {
+				return false;
+			}
+		}
+	}
+
+	for (auto son: node->sons) {
 
 		// 遍历编译单元，要么是函数定义，要么是语句
 		ast_node * son_node = ir_visit_ast_node(son);
@@ -231,12 +268,15 @@ bool IRGenerator::ir_function_define(ast_node * node)
 	ast_node * param_node = node->sons[2];
 	ast_node * block_node = node->sons[3];
 
-	// 创建一个新的函数定义
-	Function * newFunc = module->newFunction(name_node->name, type_node->type);
+	// 先在编译单元第一遍中预注册函数签名，第二遍真正翻译函数体时直接复用已有函数。
+	Function * newFunc = module->findFunction(name_node->name);
 	if (!newFunc) {
-		// 新定义的函数已经存在，则失败返回。
-		// TODO 自行追加语义错误处理
-		return false;
+		newFunc = registerFunctionSignature(module, node);
+		if (!newFunc) {
+			// 新定义的函数已经存在，则失败返回。
+			// TODO 自行追加语义错误处理
+			return false;
+		}
 	}
 
 	// 当前函数设置有效，变更为当前的函数
@@ -254,6 +294,16 @@ bool IRGenerator::ir_function_define(ast_node * node)
 	irCode.addInst(new LabelInstruction(newFunc));
 	irCode.addInst(new EntryInstruction(newFunc));
 
+	// int类型函数默认初始化返回值为0，避免无显式return时返回值未定义
+	LocalVariable * retValue = nullptr;
+	if (!type_node->type->isVoidType()) {
+		retValue = static_cast<LocalVariable *>(module->newVarValue(type_node->type));
+		newFunc->setReturnValue(retValue);
+		irCode.addInst(new MoveInstruction(newFunc, retValue, module->newConstInt(0)));
+	} else {
+		newFunc->setReturnValue(nullptr);
+	}
+
 	// 创建出口指令并不加入出口指令，等函数内的指令处理完毕后加入出口指令
 	LabelInstruction * exitLabelInst = new LabelInstruction(newFunc);
 
@@ -268,17 +318,6 @@ bool IRGenerator::ir_function_define(ast_node * node)
 		return false;
 	}
 	node->blockInsts.addInst(param_node->blockInsts);
-
-	// 新建一个Value，用于保存函数的返回值，如果没有返回值可不用申请
-	LocalVariable * retValue = nullptr;
-	if (!type_node->type->isVoidType()) {
-
-		// 保存函数返回值变量到函数信息中，在return语句翻译时需要设置值到这个变量中
-		retValue = static_cast<LocalVariable *>(module->newVarValue(type_node->type));
-	}
-	newFunc->setReturnValue(retValue);
-
-	// 这里最好设置返回值变量的初值为0，以便在没有返回值时能够返回0
 
 	// 函数内已经进入作用域，内部不再需要做变量的作用域管理
 	block_node->needScope = false;
@@ -319,12 +358,49 @@ bool IRGenerator::ir_function_define(ast_node * node)
 /// @return 翻译是否成功，true：成功，false：失败
 bool IRGenerator::ir_function_formal_params(ast_node * node)
 {
-	// TODO 目前形参还不支持，直接返回true
+	auto currentFunc = module->getCurrentFunction();
+	if (!currentFunc) {
+		return false;
+	}
 
-	// 每个形参变量都创建对应的临时变量，用于表达实参转递的值
-	// 而真实的形参则创建函数内的局部变量。
-	// 然后产生赋值指令，用于把表达实参值的临时变量拷贝到形参局部变量上。
-	// 请注意这些指令要放在Entry指令后面，因此处理的先后上要注意。
+	auto & formalParams = currentFunc->getParams();
+
+	if (!formalParams.empty() && formalParams.size() != node->sons.size()) {
+		return false;
+	}
+
+	for (size_t idx = 0; idx < node->sons.size(); ++idx) {
+		auto paramNode = node->sons[idx];
+		if (!paramNode) {
+			continue;
+		}
+
+		Type * paramType = paramNode->type;
+		if (!paramType) {
+			paramType = IntegerType::getTypeInt();
+		}
+
+		std::string paramName = paramNode->name;
+
+		auto * localVar = static_cast<LocalVariable *>(module->newVarValue(paramType, paramName));
+		if (!localVar) {
+			return false;
+		}
+
+		FormalParam * formalParam = nullptr;
+		if (!formalParams.empty()) {
+			formalParam = formalParams[idx];
+		} else {
+			formalParam = new FormalParam(paramType, paramName);
+			formalParams.push_back(formalParam);
+		}
+
+		if (!formalParam) {
+			return false;
+		}
+
+		node->blockInsts.addInst(new MoveInstruction(currentFunc, localVar, formalParam));
+	}
 
 	return true;
 }
@@ -774,10 +850,16 @@ bool IRGenerator::ir_condition(ast_node * node, LabelInstruction * trueLabel, La
 			if (!valueNode) {
 				return false;
 			}
+			if (!valueNode->val) {
+				return false;
+			}
 			auto zero = module->newConstInt(0);
 			auto condInst = new BinaryInstruction(
-				module->getCurrentFunction(), IRInstOperator::IRINST_OP_CMP_NE, valueNode->val, zero, IntegerType::getTypeBool());
-			node->blockInsts.addInst(valueNode->blockInsts);
+				module->getCurrentFunction(),
+				IRInstOperator::IRINST_OP_CMP_NE,
+				valueNode->val,
+				zero,
+				IntegerType::getTypeBool());
 			node->blockInsts.addInst(condInst);
 			node->blockInsts.addInst(
 				new CondBranchInstruction(module->getCurrentFunction(), condInst, trueLabel, falseLabel));

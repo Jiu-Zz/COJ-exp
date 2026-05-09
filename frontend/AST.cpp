@@ -226,6 +226,18 @@ ast_node * ast_node::create_type_node(type_attr & attr)
 	return type_node;
 }
 
+/// @brief 创建函数形式参数的节点
+/// @param line_no 行号
+/// @param param_name 形式参数名
+/// @return 创建的节点
+ast_node * ast_node::create_func_formal_param(uint32_t line_no, const char * param_name)
+{
+	ast_node * node = new ast_node(ast_operator_type::AST_OP_FUNC_FORMAL_PARAM, IntegerType::getTypeInt(), line_no);
+	node->line_no = line_no;
+	node->name = param_name ? param_name : "";
+	return node;
+}
+
 /// @brief 创建函数调用的节点
 /// @param funcname_node 函数名节点
 /// @param params_node 实参节点
