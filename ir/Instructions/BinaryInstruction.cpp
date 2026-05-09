@@ -40,28 +40,52 @@ void BinaryInstruction::toString(std::string & str)
 		case IRInstOperator::IRINST_OP_ADD_I:
 
 			// 加法指令，二元运算
-			str = getIRName() + " = add " + src1->getIRName() + "," + src2->getIRName();
+			str = getIRName() + " = add " + src1->getIRName() + ", " + src2->getIRName();
 			break;
 		case IRInstOperator::IRINST_OP_SUB_I:
 
 			// 减法指令，二元运算
-			str = getIRName() + " = sub " + src1->getIRName() + "," + src2->getIRName();
+			str = getIRName() + " = sub " + src1->getIRName() + ", " + src2->getIRName();
 			break;
 		case IRInstOperator::IRINST_OP_MUL_I:
 
 			// 乘法指令，二元运算
-			str = getIRName() + " = mul " + src1->getIRName() + "," + src2->getIRName();
+			str = getIRName() + " = mul " + src1->getIRName() + ", " + src2->getIRName();
 			break;
 		case IRInstOperator::IRINST_OP_DIV_I:
 
 			// 除法指令，二元运算
-			str = getIRName() + " = div " + src1->getIRName() + "," + src2->getIRName();
+			str = getIRName() + " = div " + src1->getIRName() + ", " + src2->getIRName();
 			break;
 
 		case IRInstOperator::IRINST_OP_MOD_I:
 
 			// 模运算指令，二元运算
-			str = getIRName() + " = mod " + src1->getIRName() + "," + src2->getIRName();
+			str = getIRName() + " = mod " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_EQ:
+
+			str = getIRName() + " = icmp eq " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_NE:
+
+			str = getIRName() + " = icmp ne " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_LT:
+
+			str = getIRName() + " = icmp lt " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_LE:
+
+			str = getIRName() + " = icmp le " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_GT:
+
+			str = getIRName() + " = icmp gt " + src1->getIRName() + ", " + src2->getIRName();
+			break;
+		case IRInstOperator::IRINST_OP_CMP_GE:
+
+			str = getIRName() + " = icmp ge " + src1->getIRName() + ", " + src2->getIRName();
 			break;
 
 		default:

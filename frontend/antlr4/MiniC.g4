@@ -36,13 +36,29 @@ varDef: T_ID;
 
 // 目前语句支持return和赋值语句
 statement:
-	T_RETURN expr T_SEMICOLON		 # returnStatement
-	| lVal T_ASSIGN expr T_SEMICOLON   # assignStatement
-	| block                 # blockStatement
-	| expr? T_SEMICOLON           # expressionStatement;
+	T_RETURN expr T_SEMICOLON										# returnStatement
+	| lVal T_ASSIGN expr T_SEMICOLON								# assignStatement
+	| block															# blockStatement
+	| T_IF T_L_PAREN expr T_R_PAREN statement (T_ELSE statement)?	# ifStatement
+	| T_WHILE T_L_PAREN expr T_R_PAREN statement					# whileStatement
+	| T_BREAK T_SEMICOLON											# breakStatement
+	| T_CONTINUE T_SEMICOLON										# continueStatement
+	| expr? T_SEMICOLON												# expressionStatement;
 
-// 表达式文法 expr : AddExp 表达式目前只支持加法与减法运算
-expr: addExp;
+// 表达式入口
+expr: lOrExp;
+
+// 逻辑或表达式
+lOrExp: lAndExp (T_OR lAndExp)*;
+
+// 逻辑与表达式
+lAndExp: eqExp (T_AND eqExp)*;
+
+// 相等表达式
+eqExp: relExp ((T_EQ | T_NE) relExp)*;
+
+// 关系表达式
+relExp: addExp ((T_LT | T_LE | T_GT | T_GE) addExp)*;
 
 // 加减表达式
 addExp: mulExp (addOp mulExp)*;
@@ -60,6 +76,7 @@ mulOp: T_MUL | T_DIV | T_MOD;
 unaryExp:
 	primaryExp
 	| T_ID T_L_PAREN realParamList? T_R_PAREN
+	| T_NOT unaryExp
 	| T_SUB unaryExp; // 单目 -
 
 // 基本表达式：括号表达式、整数、左值表达式
@@ -82,6 +99,18 @@ T_R_BRACE: '}';
 T_ASSIGN: '=';
 T_COMMA: ',';
 
+T_EQ: '==';
+T_NE: '!=';
+T_LT: '<';
+T_LE: '<=';
+T_GT: '>';
+T_GE: '>=';
+
+T_AND: '&&';
+T_OR: '||';
+
+T_NOT: '!';
+
 T_ADD: '+';
 T_SUB: '-';
 T_MUL: '*';
@@ -90,6 +119,11 @@ T_MOD: '%';
 
 // 要注意关键字同样也属于T_ID，因此必须放在T_ID的前面，否则会识别成T_ID
 T_RETURN: 'return';
+T_IF: 'if';
+T_ELSE: 'else';
+T_WHILE: 'while';
+T_BREAK: 'break';
+T_CONTINUE: 'continue';
 T_INT: 'int';
 T_VOID: 'void';
 

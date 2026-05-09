@@ -35,8 +35,17 @@
 
 /* 辅助定义式或者宏，后面使用时带上大括号 */
 
+%x COMMENT
+
 /* 正规式定义 */
 %%
+
+"//"[^\r\n]*     { ; }
+
+"/*"              { BEGIN(COMMENT); }
+<COMMENT>"*/"     { BEGIN(INITIAL); }
+<COMMENT>\n        { ; }
+<COMMENT>.         { ; }
 
 "("         { return T_L_PAREN; }
 ")"         { return T_R_PAREN; }
@@ -46,14 +55,27 @@
 ";"         { return T_SEMICOLON; }
 ","         { return T_COMMA; }
 
+"=="        { return T_EQ; }
+"!="        { return T_NE; }
+"<="        { return T_LE; }
+">="        { return T_GE; }
+"&&"        { return T_AND; }
+"||"        { return T_OR; }
+
 "="         { return T_ASSIGN; }
+"<"         { return T_LT; }
+">"         { return T_GT; }
+"!"         { return T_NOT; }
 "+"         { return T_ADD; }
 "-"         { return T_SUB; }
+"*"         { return T_MUL; }
+"/"         { return T_DIV; }
+"%"         { return T_MOD; }
 
 
-"0"|[1-9][0-9]*	{
-                // 词法识别无符号整数，注意对于负数，则需要识别为负号和无符号数两个Token
-                yylval.integer_num.val = (uint32_t)strtol(yytext, (char **)NULL, 10);
+"0"[xX][0-9a-fA-F]+|"0"[0-7]*|[1-9][0-9]*	{
+                // 词法识别无符号整数，支持十六进制、八进制与十进制
+                yylval.integer_num.val = (uint32_t)strtoul(yytext, (char **)NULL, 0);
                 yylval.integer_num.lineno = yylineno;
                 return T_DIGIT;
             }
@@ -69,6 +91,26 @@
                 // return关键字 关键字的识别要在标识符识别的前边，，这是因为关键字也是标识符，不过是保留的
                 return T_RETURN;
             }
+
+"if"        {
+            return T_IF;
+        }
+
+"else"      {
+            return T_ELSE;
+        }
+
+"while"     {
+            return T_WHILE;
+        }
+
+"break"     {
+            return T_BREAK;
+        }
+
+"continue"  {
+            return T_CONTINUE;
+        }
 
 [a-zA-Z_]+[0-9a-zA-Z_]* {
                 // strdup 分配的空间需要在使用完毕后使用free手动释放，否则会造成内存泄漏

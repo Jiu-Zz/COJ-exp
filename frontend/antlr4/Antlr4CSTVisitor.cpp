@@ -157,21 +157,41 @@ std::any MiniCCSTVisitor::visitBlockItem(MiniCParser::BlockItemContext * ctx)
 /// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitStatement(MiniCParser::StatementContext * ctx)
 {
-	// 识别的文法产生式：statement: T_ID T_ASSIGN expr T_SEMICOLON  # assignStatement
-	// | T_RETURN expr T_SEMICOLON # returnStatement
-	// | block  # blockStatement
-	// | expr ? T_SEMICOLON #expressionStatement;
-	if (Instanceof(assignCtx, MiniCParser::AssignStatementContext *, ctx)) {
-		return visitAssignStatement(assignCtx);
-	} else if (Instanceof(returnCtx, MiniCParser::ReturnStatementContext *, ctx)) {
-		return visitReturnStatement(returnCtx);
-	} else if (Instanceof(blockCtx, MiniCParser::BlockStatementContext *, ctx)) {
-		return visitBlockStatement(blockCtx);
-	} else if (Instanceof(exprCtx, MiniCParser::ExpressionStatementContext *, ctx)) {
-		return visitExpressionStatement(exprCtx);
+	return visit(ctx);
+}
+
+std::any MiniCCSTVisitor::visitIfStatement(MiniCParser::IfStatementContext * ctx)
+{
+	auto condNode = std::any_cast<ast_node *>(visitExpr(ctx->expr()));
+	auto thenNode = std::any_cast<ast_node *>(visitStatement(ctx->statement(0)));
+	ast_node * elseNode = nullptr;
+	if (ctx->statement().size() > 1) {
+		elseNode = std::any_cast<ast_node *>(visitStatement(ctx->statement(1)));
 	}
 
-	return nullptr;
+	if (elseNode) {
+		return ast_node::New(ast_operator_type::AST_OP_IF, condNode, thenNode, elseNode);
+	}
+	return ast_node::New(ast_operator_type::AST_OP_IF, condNode, thenNode);
+}
+
+std::any MiniCCSTVisitor::visitWhileStatement(MiniCParser::WhileStatementContext * ctx)
+{
+	auto condNode = std::any_cast<ast_node *>(visitExpr(ctx->expr()));
+	auto bodyNode = std::any_cast<ast_node *>(visitStatement(ctx->statement()));
+	return ast_node::New(ast_operator_type::AST_OP_WHILE, condNode, bodyNode);
+}
+
+std::any MiniCCSTVisitor::visitBreakStatement(MiniCParser::BreakStatementContext * ctx)
+{
+	(void) ctx;
+	return ast_node::New(ast_operator_type::AST_OP_BREAK);
+}
+
+std::any MiniCCSTVisitor::visitContinueStatement(MiniCParser::ContinueStatementContext * ctx)
+{
+	(void) ctx;
+	return ast_node::New(ast_operator_type::AST_OP_CONTINUE);
 }
 
 ///
@@ -193,9 +213,89 @@ std::any MiniCCSTVisitor::visitReturnStatement(MiniCParser::ReturnStatementConte
 /// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitExpr(MiniCParser::ExprContext * ctx)
 {
-	// 识别产生式：expr: addExp;
+	// 识别产生式：expr: lOrExp;
 
-	return visitAddExp(ctx->addExp());
+	return visitLOrExp(ctx->lOrExp());
+}
+
+std::any MiniCCSTVisitor::visitLOrExp(MiniCParser::LOrExpContext * ctx)
+{
+	if (ctx->lAndExp().empty()) {
+		return nullptr;
+	}
+
+	auto left = std::any_cast<ast_node *>(visitLAndExp(ctx->lAndExp()[0]));
+	for (size_t i = 1; i < ctx->lAndExp().size(); ++i) {
+		auto right = std::any_cast<ast_node *>(visitLAndExp(ctx->lAndExp()[i]));
+		left = ast_node::New(ast_operator_type::AST_OP_LOR, left, right);
+	}
+	return left;
+}
+
+std::any MiniCCSTVisitor::visitLAndExp(MiniCParser::LAndExpContext * ctx)
+{
+	if (ctx->eqExp().empty()) {
+		return nullptr;
+	}
+
+	auto left = std::any_cast<ast_node *>(visitEqExp(ctx->eqExp()[0]));
+	for (size_t i = 1; i < ctx->eqExp().size(); ++i) {
+		auto right = std::any_cast<ast_node *>(visitEqExp(ctx->eqExp()[i]));
+		left = ast_node::New(ast_operator_type::AST_OP_LAND, left, right);
+	}
+	return left;
+}
+
+std::any MiniCCSTVisitor::visitEqExp(MiniCParser::EqExpContext * ctx)
+{
+	if (ctx->relExp().empty()) {
+		return nullptr;
+	}
+
+	auto left = std::any_cast<ast_node *>(visitRelExp(ctx->relExp()[0]));
+	for (size_t i = 1; i < ctx->relExp().size(); ++i) {
+		ast_operator_type op = ast_operator_type::AST_OP_EQ;
+		auto opNode = dynamic_cast<antlr4::tree::TerminalNode *>(ctx->children[(i * 2) - 1]);
+		if (opNode && opNode->getSymbol()->getType() == MiniCParser::T_NE) {
+			op = ast_operator_type::AST_OP_NE;
+		}
+		auto right = std::any_cast<ast_node *>(visitRelExp(ctx->relExp()[i]));
+		left = ast_node::New(op, left, right);
+	}
+	return left;
+}
+
+std::any MiniCCSTVisitor::visitRelExp(MiniCParser::RelExpContext * ctx)
+{
+	if (ctx->addExp().empty()) {
+		return nullptr;
+	}
+
+	auto left = std::any_cast<ast_node *>(visitAddExp(ctx->addExp()[0]));
+	for (size_t i = 1; i < ctx->addExp().size(); ++i) {
+		ast_operator_type op = ast_operator_type::AST_OP_LT;
+		auto opNode = dynamic_cast<antlr4::tree::TerminalNode *>(ctx->children[(i * 2) - 1]);
+		if (opNode) {
+			switch (opNode->getSymbol()->getType()) {
+				case MiniCParser::T_LE:
+					op = ast_operator_type::AST_OP_LE;
+					break;
+				case MiniCParser::T_GT:
+					op = ast_operator_type::AST_OP_GT;
+					break;
+				case MiniCParser::T_GE:
+					op = ast_operator_type::AST_OP_GE;
+					break;
+				case MiniCParser::T_LT:
+				default:
+					op = ast_operator_type::AST_OP_LT;
+					break;
+			}
+		}
+		auto right = std::any_cast<ast_node *>(visitAddExp(ctx->addExp()[i]));
+		left = ast_node::New(op, left, right);
+	}
+	return left;
 }
 
 std::any MiniCCSTVisitor::visitAssignStatement(MiniCParser::AssignStatementContext * ctx)
@@ -320,7 +420,7 @@ std::any MiniCCSTVisitor::visitMulOp(MiniCParser::MulOpContext * ctx)
 
 std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 {
-	// 识别文法产生式：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN | T_SUB unaryExp;
+	// 识别文法产生式：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN | T_NOT unaryExp | T_SUB unaryExp;
 
 	if (ctx->primaryExp()) {
 		// 普通表达式
@@ -345,6 +445,9 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 		// 单目减运算符
 		auto unaryNode = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()));
 		return ast_node::New(ast_operator_type::AST_OP_NEG, nullptr, unaryNode);
+	} else if (ctx->T_NOT()) {
+		auto unaryNode = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()));
+		return ast_node::New(ast_operator_type::AST_OP_LNOT, nullptr, unaryNode);
 	} else {
 		return nullptr;
 	}

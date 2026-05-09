@@ -17,9 +17,12 @@
 #pragma once
 
 #include <unordered_map>
+#include <vector>
 
 #include "AST.h"
 #include "Module.h"
+
+class LabelInstruction;
 
 /// @brief AST遍历产生线性IR类
 class IRGenerator {
@@ -92,6 +95,46 @@ protected:
 	/// @return 翻译是否成功，true：成功，false：失败
 	bool ir_neg(ast_node * node);
 
+	/// @brief 关系运算AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_compare(ast_node * node);
+
+	/// @brief 逻辑与AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_logic_and(ast_node * node);
+
+	/// @brief 逻辑或AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_logic_or(ast_node * node);
+
+	/// @brief 逻辑非AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_logic_not(ast_node * node);
+
+	/// @brief if语句AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_if(ast_node * node);
+
+	/// @brief while语句AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_while(ast_node * node);
+
+	/// @brief break语句AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_break(ast_node * node);
+
+	/// @brief continue语句AST节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_continue(ast_node * node);
+
 	/// @brief 赋值AST节点翻译成线性中间IR
 	/// @param node AST节点
 	/// @return 翻译是否成功，true：成功，false：失败
@@ -137,6 +180,22 @@ protected:
 	/// @return 翻译是否成功，true：成功，false：失败
 	bool ir_default(ast_node * node);
 
+	/// @brief 根据条件表达式生成跳转到真假标签的IR
+	/// @param node 条件AST节点
+	/// @param trueLabel 真分支标签
+	/// @param falseLabel 假分支标签
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_condition(ast_node * node, LabelInstruction * trueLabel, LabelInstruction * falseLabel);
+
+	/// @brief 将条件表达式物化为0/1整数值
+	/// @param node 条件AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_condition_value(ast_node * node);
+
+	/// @brief 创建当前函数中的新标签
+	/// @return LabelInstruction *
+	LabelInstruction * newLabel();
+
 	/// @brief 根据AST的节点运算符查找对应的翻译函数并执行翻译动作
 	/// @param node AST节点
 	/// @return 成功返回node节点，否则返回nullptr
@@ -147,6 +206,14 @@ protected:
 
 	/// @brief AST节点运算符与动作函数关联的映射表
 	std::unordered_map<ast_operator_type, ast2ir_handler_t> ast2ir_handlers;
+
+	/// @brief 当前嵌套循环的入口/出口标签
+	struct LoopContext {
+		LabelInstruction * entryLabel;
+		LabelInstruction * exitLabel;
+	};
+
+	std::vector<LoopContext> loopStack;
 
 private:
 	/// @brief 抽象语法树的根

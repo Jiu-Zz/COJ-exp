@@ -1,5 +1,5 @@
 
-// Generated from /home/code/homework/exp04-minic-expr/frontend/antlr4/MiniC.g4 by ANTLR 4.12.0
+// Generated from MiniC.g4 by ANTLR 4.12.0
 
 #pragma once
 
@@ -41,9 +41,25 @@ public:
 
     virtual std::any visitBlockStatement(MiniCParser::BlockStatementContext *context) = 0;
 
+    virtual std::any visitIfStatement(MiniCParser::IfStatementContext *context) = 0;
+
+    virtual std::any visitWhileStatement(MiniCParser::WhileStatementContext *context) = 0;
+
+    virtual std::any visitBreakStatement(MiniCParser::BreakStatementContext *context) = 0;
+
+    virtual std::any visitContinueStatement(MiniCParser::ContinueStatementContext *context) = 0;
+
     virtual std::any visitExpressionStatement(MiniCParser::ExpressionStatementContext *context) = 0;
 
     virtual std::any visitExpr(MiniCParser::ExprContext *context) = 0;
+
+    virtual std::any visitLOrExp(MiniCParser::LOrExpContext *context) = 0;
+
+    virtual std::any visitLAndExp(MiniCParser::LAndExpContext *context) = 0;
+
+    virtual std::any visitEqExp(MiniCParser::EqExpContext *context) = 0;
+
+    virtual std::any visitRelExp(MiniCParser::RelExpContext *context) = 0;
 
     virtual std::any visitAddExp(MiniCParser::AddExpContext *context) = 0;
 

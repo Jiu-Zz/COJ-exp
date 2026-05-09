@@ -27,6 +27,7 @@
 #include "IRGenerator.h"
 #include "Module.h"
 #include "EntryInstruction.h"
+#include "CondBranchInstruction.h"
 #include "LabelInstruction.h"
 #include "ExitInstruction.h"
 #include "FuncCallInstruction.h"
@@ -51,10 +52,23 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
 	ast2ir_handlers[ast_operator_type::AST_OP_DIV] = &IRGenerator::ir_div;
 	ast2ir_handlers[ast_operator_type::AST_OP_MOD] = &IRGenerator::ir_mod;
 	ast2ir_handlers[ast_operator_type::AST_OP_NEG] = &IRGenerator::ir_neg;
+	ast2ir_handlers[ast_operator_type::AST_OP_LT] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_LE] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_GT] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_GE] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_EQ] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_NE] = &IRGenerator::ir_compare;
+	ast2ir_handlers[ast_operator_type::AST_OP_LAND] = &IRGenerator::ir_logic_and;
+	ast2ir_handlers[ast_operator_type::AST_OP_LOR] = &IRGenerator::ir_logic_or;
+	ast2ir_handlers[ast_operator_type::AST_OP_LNOT] = &IRGenerator::ir_logic_not;
 
 	/* 语句 */
 	ast2ir_handlers[ast_operator_type::AST_OP_ASSIGN] = &IRGenerator::ir_assign;
 	ast2ir_handlers[ast_operator_type::AST_OP_RETURN] = &IRGenerator::ir_return;
+	ast2ir_handlers[ast_operator_type::AST_OP_IF] = &IRGenerator::ir_if;
+	ast2ir_handlers[ast_operator_type::AST_OP_WHILE] = &IRGenerator::ir_while;
+	ast2ir_handlers[ast_operator_type::AST_OP_BREAK] = &IRGenerator::ir_break;
+	ast2ir_handlers[ast_operator_type::AST_OP_CONTINUE] = &IRGenerator::ir_continue;
 
 	/* 函数调用 */
 	ast2ir_handlers[ast_operator_type::AST_OP_FUNC_CALL] = &IRGenerator::ir_function_call;
@@ -236,7 +250,8 @@ bool IRGenerator::ir_function_define(ast_node * node)
 
 	// 这里也可增加一个函数入口Label指令，便于后续基本块划分
 
-	// 创建并加入Entry入口指令
+	// 参考IR在入口前会先放一个label，再放entry指令
+	irCode.addInst(new LabelInstruction(newFunc));
 	irCode.addInst(new EntryInstruction(newFunc));
 
 	// 创建出口指令并不加入出口指令，等函数内的指令处理完毕后加入出口指令
@@ -616,6 +631,326 @@ bool IRGenerator::ir_neg(ast_node * node)
 
 	node->val = inst;
 
+	return true;
+}
+
+/// @brief 创建当前函数中的新标签
+/// @return LabelInstruction *
+LabelInstruction * IRGenerator::newLabel()
+{
+	Function * currentFunc = module->getCurrentFunction();
+	if (!currentFunc) {
+		return nullptr;
+	}
+
+	return new LabelInstruction(currentFunc);
+}
+
+/// @brief 关系运算AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_compare(ast_node * node)
+{
+	auto left = ir_visit_ast_node(node->sons[0]);
+	auto right = ir_visit_ast_node(node->sons[1]);
+
+	if (!left || !right)
+		return false;
+
+	IRInstOperator op = IRInstOperator::IRINST_OP_CMP_EQ;
+	switch (node->node_type) {
+		case ast_operator_type::AST_OP_LT:
+			op = IRInstOperator::IRINST_OP_CMP_LT;
+			break;
+		case ast_operator_type::AST_OP_LE:
+			op = IRInstOperator::IRINST_OP_CMP_LE;
+			break;
+		case ast_operator_type::AST_OP_GT:
+			op = IRInstOperator::IRINST_OP_CMP_GT;
+			break;
+		case ast_operator_type::AST_OP_GE:
+			op = IRInstOperator::IRINST_OP_CMP_GE;
+			break;
+		case ast_operator_type::AST_OP_NE:
+			op = IRInstOperator::IRINST_OP_CMP_NE;
+			break;
+		case ast_operator_type::AST_OP_EQ:
+		default:
+			op = IRInstOperator::IRINST_OP_CMP_EQ;
+			break;
+	}
+
+	auto inst =
+		new BinaryInstruction(module->getCurrentFunction(), op, left->val, right->val, IntegerType::getTypeBool());
+
+	node->blockInsts.addInst(left->blockInsts);
+	node->blockInsts.addInst(right->blockInsts);
+	node->blockInsts.addInst(inst);
+	node->val = inst;
+	node->type = IntegerType::getTypeBool();
+
+	return true;
+}
+
+/// @brief 根据条件表达式生成跳转到真假标签的IR
+/// @param node 条件AST节点
+/// @param trueLabel 真分支标签
+/// @param falseLabel 假分支标签
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_condition(ast_node * node, LabelInstruction * trueLabel, LabelInstruction * falseLabel)
+{
+	if (!node || !trueLabel || !falseLabel) {
+		return false;
+	}
+
+	switch (node->node_type) {
+		case ast_operator_type::AST_OP_LAND: {
+			auto midLabel = newLabel();
+			if (!midLabel) {
+				return false;
+			}
+
+			auto left = node->sons[0];
+			auto right = node->sons[1];
+
+			if (!ir_condition(left, midLabel, falseLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(left->blockInsts);
+			node->blockInsts.addInst(midLabel);
+			if (!ir_condition(right, trueLabel, falseLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(right->blockInsts);
+			return true;
+		}
+		case ast_operator_type::AST_OP_LOR: {
+			auto midLabel = newLabel();
+			if (!midLabel) {
+				return false;
+			}
+
+			auto left = node->sons[0];
+			auto right = node->sons[1];
+
+			if (!ir_condition(left, trueLabel, midLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(left->blockInsts);
+			node->blockInsts.addInst(midLabel);
+			if (!ir_condition(right, trueLabel, falseLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(right->blockInsts);
+			return true;
+		}
+		case ast_operator_type::AST_OP_LNOT:
+			if (!ir_condition(node->sons[0], falseLabel, trueLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(node->sons[0]->blockInsts);
+			return true;
+		case ast_operator_type::AST_OP_NEG:
+			if (!ir_condition(node->sons[0], trueLabel, falseLabel)) {
+				return false;
+			}
+			node->blockInsts.addInst(node->sons[0]->blockInsts);
+			return true;
+		case ast_operator_type::AST_OP_LT:
+		case ast_operator_type::AST_OP_LE:
+		case ast_operator_type::AST_OP_GT:
+		case ast_operator_type::AST_OP_GE:
+		case ast_operator_type::AST_OP_EQ:
+		case ast_operator_type::AST_OP_NE: {
+			if (!ir_compare(node)) {
+				return false;
+			}
+			node->blockInsts.addInst(
+				new CondBranchInstruction(module->getCurrentFunction(), node->val, trueLabel, falseLabel));
+			return true;
+		}
+		default: {
+			auto valueNode = ir_visit_ast_node(node);
+			if (!valueNode) {
+				return false;
+			}
+			auto zero = module->newConstInt(0);
+			auto condInst = new BinaryInstruction(
+				module->getCurrentFunction(), IRInstOperator::IRINST_OP_CMP_NE, valueNode->val, zero, IntegerType::getTypeBool());
+			node->blockInsts.addInst(valueNode->blockInsts);
+			node->blockInsts.addInst(condInst);
+			node->blockInsts.addInst(
+				new CondBranchInstruction(module->getCurrentFunction(), condInst, trueLabel, falseLabel));
+			node->val = valueNode->val;
+			return true;
+		}
+	}
+}
+
+/// @brief 将条件表达式物化为0/1整数值
+/// @param node 条件AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_condition_value(ast_node * node)
+{
+	auto currentFunc = module->getCurrentFunction();
+	auto trueLabel = newLabel();
+	auto falseLabel = newLabel();
+	auto exitLabel = newLabel();
+
+	if (!currentFunc || !trueLabel || !falseLabel || !exitLabel) {
+		return false;
+	}
+
+	if (!ir_condition(node, trueLabel, falseLabel)) {
+		return false;
+	}
+
+	auto resultVar = module->newVarValue(IntegerType::getTypeInt());
+	if (!resultVar) {
+		return false;
+	}
+
+	node->blockInsts.addInst(trueLabel);
+	node->blockInsts.addInst(new MoveInstruction(currentFunc, resultVar, module->newConstInt(1)));
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, exitLabel));
+	node->blockInsts.addInst(falseLabel);
+	node->blockInsts.addInst(new MoveInstruction(currentFunc, resultVar, module->newConstInt(0)));
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, exitLabel));
+	node->blockInsts.addInst(exitLabel);
+
+	node->val = resultVar;
+	node->type = IntegerType::getTypeInt();
+
+	return true;
+}
+
+/// @brief 逻辑与AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_logic_and(ast_node * node)
+{
+	return ir_condition_value(node);
+}
+
+/// @brief 逻辑或AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_logic_or(ast_node * node)
+{
+	return ir_condition_value(node);
+}
+
+/// @brief 逻辑非AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_logic_not(ast_node * node)
+{
+	return ir_condition_value(node);
+}
+
+/// @brief if语句AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_if(ast_node * node)
+{
+	auto currentFunc = module->getCurrentFunction();
+	auto trueLabel = newLabel();
+	auto falseLabel = newLabel();
+	auto exitLabel = newLabel();
+
+	if (!currentFunc || !trueLabel || !falseLabel || !exitLabel) {
+		return false;
+	}
+
+	if (!ir_condition(node->sons[0], trueLabel, falseLabel)) {
+		return false;
+	}
+
+	auto thenNode = node->sons[1];
+	ast_node * elseNode = (node->sons.size() > 2) ? node->sons[2] : nullptr;
+
+	node->blockInsts.addInst(node->sons[0]->blockInsts);
+	node->blockInsts.addInst(trueLabel);
+	if (!ir_visit_ast_node(thenNode)) {
+		return false;
+	}
+	node->blockInsts.addInst(thenNode->blockInsts);
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, exitLabel));
+	node->blockInsts.addInst(falseLabel);
+	if (elseNode) {
+		if (!ir_visit_ast_node(elseNode)) {
+			return false;
+		}
+		node->blockInsts.addInst(elseNode->blockInsts);
+	}
+	node->blockInsts.addInst(exitLabel);
+
+	return true;
+}
+
+/// @brief while语句AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_while(ast_node * node)
+{
+	auto currentFunc = module->getCurrentFunction();
+	auto entryLabel = newLabel();
+	auto bodyLabel = newLabel();
+	auto exitLabel = newLabel();
+
+	if (!currentFunc || !entryLabel || !bodyLabel || !exitLabel) {
+		return false;
+	}
+
+	node->blockInsts.addInst(entryLabel);
+	if (!ir_condition(node->sons[0], bodyLabel, exitLabel)) {
+		return false;
+	}
+	node->blockInsts.addInst(node->sons[0]->blockInsts);
+	node->blockInsts.addInst(bodyLabel);
+
+	loopStack.push_back({entryLabel, exitLabel});
+	auto bodyNode = node->sons[1];
+	if (!ir_visit_ast_node(bodyNode)) {
+		loopStack.pop_back();
+		return false;
+	}
+	loopStack.pop_back();
+
+	node->blockInsts.addInst(bodyNode->blockInsts);
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, entryLabel));
+	node->blockInsts.addInst(exitLabel);
+
+	return true;
+}
+
+/// @brief break语句AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_break(ast_node * node)
+{
+	if (loopStack.empty()) {
+		minic_log(LOG_ERROR, "break语句不在循环中");
+		return false;
+	}
+
+	auto currentFunc = module->getCurrentFunction();
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, loopStack.back().exitLabel));
+	return true;
+}
+
+/// @brief continue语句AST节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_continue(ast_node * node)
+{
+	if (loopStack.empty()) {
+		minic_log(LOG_ERROR, "continue语句不在循环中");
+		return false;
+	}
+
+	auto currentFunc = module->getCurrentFunction();
+	node->blockInsts.addInst(new GotoInstruction(currentFunc, loopStack.back().entryLabel));
 	return true;
 }
 

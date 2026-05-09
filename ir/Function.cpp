@@ -96,9 +96,7 @@ void Function::toString(std::string & str)
 		str += param_str;
 	}
 
-	str += ")\n";
-
-	str += "{\n";
+	str += ") {\n";
 
 	// 输出局部变量的名字与IR名字
 	for (auto & var: this->varsVector) {
@@ -109,7 +107,7 @@ void Function::toString(std::string & str)
 		std::string extraStr;
 		std::string realName = var->getName();
 		if (!realName.empty()) {
-			str += " ; " + std::to_string(var->getScopeLevel()) + ":" + realName;
+			str += " ; variable: " + realName;
 		}
 
 		str += "\n";
@@ -287,6 +285,8 @@ void Function::renameIR()
 	}
 
 	int32_t nameIndex = 0;
+	int32_t labelIndex = 1;
+	Instruction * entryLabel = nullptr;
 
 	// 形式参数重命名
 	for (auto & param: this->params) {
@@ -299,10 +299,26 @@ void Function::renameIR()
 		var->setIRName(IR_LOCAL_VARNAME_PREFIX + std::to_string(nameIndex++));
 	}
 
-	// 遍历所有的指令进行命名
+	// 入口label先命名为L1，出口label固定排在第二个，和参考IR保持一致
 	for (auto inst: this->getInterCode().getInsts()) {
 		if (inst->getOp() == IRInstOperator::IRINST_OP_LABEL) {
-			inst->setIRName(IR_LABEL_PREFIX + std::to_string(nameIndex++));
+			entryLabel = inst;
+			inst->setIRName(IR_LABEL_PREFIX + std::to_string(labelIndex++));
+			break;
+		}
+	}
+
+	if (exitLabel && exitLabel != entryLabel) {
+		exitLabel->setIRName(IR_LABEL_PREFIX + std::to_string(labelIndex++));
+	}
+
+	// 遍历所有的指令进行命名，跳过已经特殊处理的入口/出口label
+	for (auto inst: this->getInterCode().getInsts()) {
+		if (inst->getOp() == IRInstOperator::IRINST_OP_LABEL) {
+			if (inst == entryLabel || inst == exitLabel) {
+				continue;
+			}
+			inst->setIRName(IR_LABEL_PREFIX + std::to_string(labelIndex++));
 		} else if (inst->hasResultValue()) {
 			inst->setIRName(IR_TEMP_VARNAME_PREFIX + std::to_string(nameIndex++));
 		}

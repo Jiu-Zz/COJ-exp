@@ -1,5 +1,5 @@
 
-// Generated from /home/code/homework/exp04-minic-expr/frontend/antlr4/MiniC.g4 by ANTLR 4.12.0
+// Generated from MiniC.g4 by ANTLR 4.12.0
 
 #pragma once
 
@@ -59,11 +59,43 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitIfStatement(MiniCParser::IfStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitWhileStatement(MiniCParser::WhileStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitBreakStatement(MiniCParser::BreakStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitContinueStatement(MiniCParser::ContinueStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitExpressionStatement(MiniCParser::ExpressionStatementContext *ctx) override {
     return visitChildren(ctx);
   }
 
   virtual std::any visitExpr(MiniCParser::ExprContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitLOrExp(MiniCParser::LOrExpContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitLAndExp(MiniCParser::LAndExpContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitEqExp(MiniCParser::EqExpContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitRelExp(MiniCParser::RelExpContext *ctx) override {
     return visitChildren(ctx);
   }
 

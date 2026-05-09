@@ -51,14 +51,18 @@ ast_node * get_ast_root()
 %token <type> T_INT
 
 // 关键或保留字 一词一类 不需要赋予语义属性
-%token T_RETURN
+%token T_RETURN T_IF T_ELSE T_WHILE T_BREAK T_CONTINUE
 
 // 分隔符 一词一类 不需要赋予语义属性
 %token T_SEMICOLON T_L_PAREN T_R_PAREN T_L_BRACE T_R_BRACE
 %token T_COMMA
 
 // 运算符
-%token T_ASSIGN T_SUB T_ADD
+%token T_ASSIGN T_SUB T_ADD T_MUL T_DIV T_MOD
+%token T_LT T_LE T_GT T_GE T_EQ T_NE T_AND T_OR T_NOT
+
+%nonassoc T_IFX
+%nonassoc T_ELSE
 
 // 非终结符
 // %type指定文法的非终结符号，<>可指定文法属性
@@ -69,12 +73,13 @@ ast_node * get_ast_root()
 %type <node> BlockItem
 %type <node> Statement
 %type <node> Expr
+%type <node> LOrExp LAndExp EqExp RelExp
 %type <node> LVal
 %type <node> VarDecl VarDeclExpr VarDef
-%type <node> AddExp UnaryExp PrimaryExp
+%type <node> AddExp MulExp UnaryExp PrimaryExp
 %type <node> RealParamList
 %type <type> BasicType
-%type <op_class> AddOp
+%type <op_class> AddOp MulOp
 %%
 
 // 编译单元可包含若干个函数与全局变量定义。要在语义分析时检查main函数存在
@@ -258,36 +263,113 @@ Statement : T_RETURN Expr T_SEMICOLON {
 		// 直接返回空指针，需要再把语句加入到语句块时要注意判断，空语句不要加入
 		$$ = nullptr;
 	}
+	| T_IF T_L_PAREN Expr T_R_PAREN Statement %prec T_IFX {
+		$$ = ast_node::New(ast_operator_type::AST_OP_IF, $3, $5);
+	}
+	| T_IF T_L_PAREN Expr T_R_PAREN Statement T_ELSE Statement {
+		$$ = ast_node::New(ast_operator_type::AST_OP_IF, $3, $5, $7);
+	}
+	| T_WHILE T_L_PAREN Expr T_R_PAREN Statement {
+		$$ = ast_node::New(ast_operator_type::AST_OP_WHILE, $3, $5);
+	}
+	| T_BREAK T_SEMICOLON {
+		$$ = ast_node::New(ast_operator_type::AST_OP_BREAK);
+	}
+	| T_CONTINUE T_SEMICOLON {
+		$$ = ast_node::New(ast_operator_type::AST_OP_CONTINUE);
+	}
 	;
 
-// 表达式文法 expr : AddExp
-// 表达式目前只支持加法与减法运算
-Expr : AddExp {
+// 逻辑或表达式
+LOrExp : LAndExp {
+		$$ = $1;
+	}
+	| LOrExp T_OR LAndExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_LOR, $1, $3);
+	}
+	;
+
+// 逻辑与表达式
+LAndExp : EqExp {
+		$$ = $1;
+	}
+	| LAndExp T_AND EqExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_LAND, $1, $3);
+	}
+	;
+
+// 相等表达式
+EqExp : RelExp {
+		$$ = $1;
+	}
+	| EqExp T_EQ RelExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_EQ, $1, $3);
+	}
+	| EqExp T_NE RelExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_NE, $1, $3);
+	}
+	;
+
+// 关系表达式
+RelExp : AddExp {
+		$$ = $1;
+	}
+	| RelExp T_LT AddExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_LT, $1, $3);
+	}
+	| RelExp T_LE AddExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_LE, $1, $3);
+	}
+	| RelExp T_GT AddExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_GT, $1, $3);
+	}
+	| RelExp T_GE AddExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_GE, $1, $3);
+	}
+	;
+
+// 表达式入口
+Expr : LOrExp {
 		// 直接传递给归约后的节点
 		$$ = $1;
 	}
 	;
 
-// 加减表达式文法：addExp: unaryExp (addOp unaryExp)*
+// 加减表达式文法：addExp: mulExp (addOp mulExp)*
 // 由于bison不支持用闭包表达，因此需要拆分成左递归的形式
 // 改造后的左递归文法：
-// addExp : unaryExp | unaryExp addOp unaryExp | addExp addOp unaryExp
-AddExp : UnaryExp {
+// addExp : mulExp | mulExp addOp mulExp | addExp addOp mulExp
+AddExp : MulExp {
 		// 一目表达式
 
 		// 直接传递到归约后的节点
 		$$ = $1;
 	}
-	| UnaryExp AddOp UnaryExp {
+	| MulExp AddOp MulExp {
 		// 两个一目表达式的加减运算
 
 		// 创建加减运算节点，其孩子为两个一目表达式节点
 		$$ = ast_node::New(ast_operator_type($2), $1, $3);
 	}
-	| AddExp AddOp UnaryExp {
+	| AddExp AddOp MulExp {
 		// 左递归形式可通过加减连接多个一元表达式
 
 		// 创建加减运算节点，孩子为AddExp($1)和UnaryExp($3)
+		$$ = ast_node::New(ast_operator_type($2), $1, $3);
+	}
+	;
+
+// 乘除模表达式文法：mulExp: unaryExp (mulOp unaryExp)*
+// 由于bison不支持用闭包表达，因此需要拆分成左递归的形式
+// 改造后的左递归文法：
+// mulExp : unaryExp | unaryExp mulOp unaryExp | mulExp mulOp unaryExp
+MulExp : UnaryExp {
+		$$ = $1;
+	}
+	| UnaryExp MulOp UnaryExp {
+		$$ = ast_node::New(ast_operator_type($2), $1, $3);
+	}
+	| MulExp MulOp UnaryExp {
 		$$ = ast_node::New(ast_operator_type($2), $1, $3);
 	}
 	;
@@ -301,10 +383,22 @@ AddOp: T_ADD {
 	}
 	;
 
-// 目前一元表达式可以为基本表达式、函数调用，其中函数调用的实参可有可无
-// 其文法为：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN
+// 乘除模运算符
+MulOp: T_MUL {
+		$$ = (int)ast_operator_type::AST_OP_MUL;
+	}
+	| T_DIV {
+		$$ = (int)ast_operator_type::AST_OP_DIV;
+	}
+	| T_MOD {
+		$$ = (int)ast_operator_type::AST_OP_MOD;
+	}
+	;
+
+// 目前一元表达式可以为基本表达式、函数调用、单目运算，其中函数调用的实参可有可无
+// 其文法为：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN | T_NOT unaryExp | T_SUB unaryExp
 // 由于bison不支持？表达，因此变更后的文法为：
-// unaryExp: primaryExp | T_ID T_L_PAREN T_R_PAREN | T_ID T_L_PAREN realParamList T_R_PAREN
+// unaryExp: primaryExp | T_ID T_L_PAREN T_R_PAREN | T_ID T_L_PAREN realParamList T_R_PAREN | T_NOT unaryExp | T_SUB unaryExp
 UnaryExp : PrimaryExp {
 		// 基本表达式
 
@@ -341,6 +435,12 @@ UnaryExp : PrimaryExp {
 
 		// 创建函数调用节点，其孩子为被调用函数名和实参，实参不为空
 		$$ = ast_node::create_func_call(name_node, paramListNode);
+	}
+	| T_NOT UnaryExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_LNOT, nullptr, $2);
+	}
+	| T_SUB UnaryExp {
+		$$ = ast_node::New(ast_operator_type::AST_OP_NEG, nullptr, $2);
 	}
 	;
 
