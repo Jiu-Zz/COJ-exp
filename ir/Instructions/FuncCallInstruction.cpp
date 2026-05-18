@@ -17,6 +17,20 @@
 #include "Function.h"
 #include "Common.h"
 #include "Type.h"
+#include "Types/ArrayType.h"
+
+namespace {
+	std::string formatLegacyTypeAndName(Type * type, const std::string & irName)
+	{
+		auto * arrayType = dynamic_cast<ArrayType *>(type);
+		if (arrayType) {
+			return arrayType->getLegacyElementTypeString() + " " + irName + arrayType->getLegacyDimensionsString();
+		}
+
+		return type->toString() + " " + irName;
+	}
+
+} // namespace
 
 /// @brief 含有参数的函数调用
 /// @param srcVal 函数的实参Value
@@ -68,7 +82,7 @@ void FuncCallInstruction::toString(std::string & str)
 
 			auto operand = getOperand(k);
 
-			str += operand->getType()->toString() + " " + operand->getIRName();
+			str += formatLegacyTypeAndName(operand->getType(), operand->getIRName());
 
 			if (k != (operandsNum - 1)) {
 				str += ", ";

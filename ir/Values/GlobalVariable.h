@@ -18,6 +18,7 @@
 
 #include "GlobalValue.h"
 #include "IRConstant.h"
+#include "Types/ArrayType.h"
 
 ///
 /// @brief 全局变量，寻址时通过符号名或变量名来寻址
@@ -89,7 +90,13 @@ public:
 	///
 	void toDeclareString(std::string & str)
 	{
-		str = "declare " + getType()->toString() + " " + getIRName();
+		auto * arrayType = dynamic_cast<ArrayType *>(getType());
+		if (arrayType) {
+			str = "declare " + arrayType->getLegacyElementTypeString() + " " + getIRName() +
+				  arrayType->getLegacyDimensionsString();
+		} else {
+			str = "declare " + getType()->toString() + " " + getIRName();
+		}
 	}
 
 private:

@@ -45,6 +45,9 @@ enum class ast_operator_type : int {
 	/// @brief 复杂类型的节点
 	AST_OP_LEAF_TYPE,
 
+	/// @brief 左值/数组访问节点，name保存变量名，sons保存下标表达式
+	AST_OP_LVAL,
+
 	/* 以下为AST的内部节点，含根节点 */
 
 	/// @brief 文件编译单元运算符，可包含函数定义、语句块等孩子
@@ -239,12 +242,26 @@ public:
 	/// @return 创建的节点
 	static ast_node * create_type_node(type_attr & type);
 
+	/// @brief 创建数组类型节点
+	/// @param type 类型信息
+	/// @param dims 数组维度
+	/// @return 创建的节点
+	static ast_node * create_type_node(type_attr & type, const std::vector<int64_t> & dims);
+
 	///
 	/// @brief 类型属性转换成Type
 	/// @param attr 词法属性
 	/// @return Type* 类型
 	///
 	static Type * typeAttr2Type(type_attr & attr);
+
+	///
+	/// @brief 类型属性与数组维度转换成Type
+	/// @param attr 词法属性
+	/// @param dims 数组维度
+	/// @return Type* 类型
+	///
+	static Type * typeAttr2Type(type_attr & attr, const std::vector<int64_t> & dims);
 
 	///
 	/// @brief 根据第一个变量定义创建变量声明语句节点
@@ -268,6 +285,9 @@ public:
 	/// @return ast_node* 类型声明节点
 	///
 	static ast_node * createVarDeclNode(Type * type, var_id_attr & id);
+
+	/// @brief 根据变量的类型、属性和数组维度创建变量声明节点
+	static ast_node * createVarDeclNode(Type * type, var_id_attr & id, const std::vector<int64_t> & dims);
 
 	///
 	/// @brief 根据类型以及变量ID创建变量声明节点
@@ -336,6 +356,12 @@ public:
 
 	/// @brief 变量名，或者函数名
 	std::string name;
+
+	/// @brief 数组下标维度，按从外到内顺序保存，空表示标量
+	std::vector<int64_t> arrayDims;
+
+	/// @brief 函数形参是否为数组参数，决定DragonIR中是否降维为0维首维
+	bool isArrayParam = false;
 
 	/// @brief 父节点
 	ast_node * parent = nullptr;

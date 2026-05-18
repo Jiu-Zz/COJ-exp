@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 ///
 /// @brief 基本类型枚举类
@@ -59,3 +60,10 @@ typedef struct type_attr {
 	BasicType type; // 类型
 	int64_t lineno; // 行号
 } type_attr;
+
+///
+/// @brief 数组维度属性，按从外到内的顺序保存，例如 int A[2][3] => {2, 3}
+///
+typedef struct array_dim_attr {
+	std::vector<int64_t> dims;
+} array_dim_attr;

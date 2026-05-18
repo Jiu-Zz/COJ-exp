@@ -76,6 +76,12 @@ enum class IRInstOperator : std::int8_t {
 	/// @brief 赋值指令，一元运算
 	IRINST_OP_ASSIGN,
 
+	/// @brief 间接读指令，result = load addr
+	IRINST_OP_LOAD,
+
+	/// @brief 间接写指令，store src -> addr
+	IRINST_OP_STORE,
+
 	/// @brief 函数调用，多目运算，个数不限
 	IRINST_OP_FUNC_CALL,
 
@@ -100,7 +106,7 @@ public:
 	explicit Instruction(Function * _func, IRInstOperator op, Type * _type);
 
 	/// @brief 析构函数
-	virtual ~Instruction() = default;
+	~Instruction() override = default;
 
 	/// @brief 获取指令操作码
 	/// @return 指令操作码

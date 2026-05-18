@@ -55,7 +55,7 @@ ast_node * get_ast_root()
 %token <type> T_VOID
 
 // 分隔符 一词一类 不需要赋予语义属性
-%token T_SEMICOLON T_L_PAREN T_R_PAREN T_L_BRACE T_R_BRACE
+%token T_SEMICOLON T_L_PAREN T_R_PAREN T_L_BRACKET T_R_BRACKET T_L_BRACE T_R_BRACE
 %token T_COMMA
 
 // 运算符
@@ -80,6 +80,7 @@ ast_node * get_ast_root()
 %type <node> LOrExp LAndExp EqExp RelExp
 %type <node> LVal
 %type <node> VarDecl VarDeclExpr VarDef
+%type <node> FuncFParamArrayDims VarDefArrayDims
 %type <node> AddExp MulExp UnaryExp PrimaryExp
 %type <node> RealParamList
 %type <type> BasicType
@@ -201,6 +202,24 @@ FuncFParam : BasicType T_ID {
 		$$ = paramNode;
 		free($2.id);
 	}
+	| BasicType T_ID FuncFParamArrayDims {
+		ast_node * paramNode = ast_node::create_func_formal_param($2.lineno, $2.id);
+		paramNode->arrayDims = $3->arrayDims;
+		paramNode->isArrayParam = !paramNode->arrayDims.empty();
+		paramNode->type = ast_node::typeAttr2Type($1, paramNode->arrayDims);
+		$$ = paramNode;
+		free($2.id);
+	}
+	;
+
+FuncFParamArrayDims : T_L_BRACKET T_R_BRACKET {
+		$$ = ast_node::New(ast_operator_type::AST_OP_BLOCK);
+		$$->arrayDims.push_back(0);
+	}
+	| FuncFParamArrayDims T_L_BRACKET T_DIGIT T_R_BRACKET {
+		$$ = $1;
+		$$->arrayDims.push_back((int64_t) $3.val);
+	}
 	;
 
 // 语句块的文法Block ： T_L_BRACE BlockItemList? T_R_BRACE
@@ -261,7 +280,7 @@ VarDecl : VarDeclExpr T_SEMICOLON {
 VarDeclExpr: T_INT VarDef {
 
 		// 创建类型节点
-		ast_node * type_node = ast_node::create_type_node($1);
+		ast_node * type_node = ast_node::create_type_node($1, $2->arrayDims);
 
 		// 创建变量定义节点
 		ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, $2);
@@ -269,11 +288,15 @@ VarDeclExpr: T_INT VarDef {
 
 		// 创建变量声明语句，并加入第一个变量
 		$$ = ast_node::create_var_decl_stmt_node(decl_node);
+		$$->type = ast_node::typeAttr2Type($1);
 	}
 	| VarDeclExpr T_COMMA VarDef {
 
 		// 创建类型节点，这里从VarDeclExpr获取类型，前面已经设置
-		ast_node * type_node = ast_node::New($1->type);
+		type_attr baseType;
+		baseType.type = BasicType::TYPE_INT;
+		baseType.lineno = -1;
+		ast_node * type_node = ast_node::create_type_node(baseType, $3->arrayDims);
 
 		// 创建变量定义节点
 		ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, $3);
@@ -291,6 +314,21 @@ VarDef : T_ID {
 
 		// 对于字符型字面量的字符串空间需要释放，因词法用到了strdup进行了字符串复制
 		free($1.id);
+	}
+	| T_ID VarDefArrayDims {
+		$$ = ast_node::New(var_id_attr{$1.id, $1.lineno});
+		$$->arrayDims = $2->arrayDims;
+		free($1.id);
+	}
+	;
+
+VarDefArrayDims : T_L_BRACKET T_DIGIT T_R_BRACKET {
+		$$ = ast_node::New(ast_operator_type::AST_OP_BLOCK);
+		$$->arrayDims.push_back((int64_t) $2.val);
+	}
+	| VarDefArrayDims T_L_BRACKET T_DIGIT T_R_BRACKET {
+		$$ = $1;
+		$$->arrayDims.push_back((int64_t) $3.val);
 	}
 	;
 
@@ -548,11 +586,15 @@ RealParamList : Expr {
 LVal : T_ID {
 		// 变量名终结符
 
-		// 创建变量名终结符节点
-		$$ = ast_node::New($1);
+		$$ = ast_node::New(ast_operator_type::AST_OP_LVAL);
+		$$->name = $1.id;
+		$$->line_no = $1.lineno;
 
 		// 对于字符型字面量的字符串空间需要释放，因词法用到了strdup进行了字符串复制
 		free($1.id);
+	}
+	| LVal T_L_BRACKET Expr T_R_BRACKET {
+		$$ = $1->insert_son_node($3);
 	}
 	;
 

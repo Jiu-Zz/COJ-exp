@@ -1,7 +1,7 @@
 ﻿///
 /// @file IRGenerator.cpp
 /// @brief AST遍历产生线性IR的源文件
-/// @author zenglj (zenglj@live.com)
+/// @author Jiu-Zz
 /// @version 1.1
 /// @date 2024-11-23
 ///
@@ -10,8 +10,8 @@
 /// @par 修改日志:
 /// <table>
 /// <tr><th>Date       <th>Version <th>Author  <th>Description
-/// <tr><td>2024-09-29 <td>1.0     <td>zenglj  <td>新建
-/// <tr><td>2024-11-23 <td>1.1     <td>zenglj  <td>表达式版增强
+/// <tr><td>2024-09-29 <td>1.0     <td>Jiu-Zz  <td>新建
+/// <tr><td>2024-11-23 <td>1.1     <td>Jiu-Zz  <td>表达式版增强
 /// </table>
 ///
 #include <cstdint>
@@ -33,36 +33,122 @@
 #include "FuncCallInstruction.h"
 #include "BinaryInstruction.h"
 #include "MoveInstruction.h"
+#include "LoadInstruction.h"
+#include "StoreInstruction.h"
 #include "GotoInstruction.h"
+#include "Types/ArrayType.h"
+#include "Types/PointerType.h"
+#include "Types/IntegerType.h"
+#include "Values/ConstInt.h"
 
 namespace {
 
-Function * registerFunctionSignature(Module * module, ast_node * node)
-{
-	if (!module || !node || node->node_type != ast_operator_type::AST_OP_FUNC_DEF) {
-		return nullptr;
+	Function * registerFunctionSignature(Module * module, ast_node * node)
+	{
+		if (!module || !node || node->node_type != ast_operator_type::AST_OP_FUNC_DEF) {
+			return nullptr;
+		}
+
+		ast_node * typeNode = node->sons[0];
+		ast_node * nameNode = node->sons[1];
+		ast_node * paramsNode = node->sons[2];
+
+		std::vector<FormalParam *> params;
+		if (paramsNode) {
+			for (auto paramNode: paramsNode->sons) {
+				if (!paramNode) {
+					continue;
+				}
+
+				auto * param = new FormalParam(paramNode->type, paramNode->name);
+				params.push_back(param);
+			}
+		}
+
+		return module->newFunction(nameNode->name, typeNode->type, params, false);
 	}
 
-	ast_node * typeNode = node->sons[0];
-	ast_node * nameNode = node->sons[1];
-	ast_node * paramsNode = node->sons[2];
+} // namespace
 
-	std::vector<FormalParam *> params;
-	if (paramsNode) {
-		for (auto paramNode: paramsNode->sons) {
-			if (!paramNode) {
-				continue;
-			}
+bool IRGenerator::build_array_address_value(ast_node * node, Value *& baseValue, Value *& addressValue)
+{
+	if (!node || node->sons.empty()) {
+		return false;
+	}
 
-			auto * param = new FormalParam(paramNode->type, paramNode->name);
-			params.push_back(param);
+	Value * base = module->findVarValue(node->name);
+	if (!base) {
+		return false;
+	}
+
+	auto * arrayType = dynamic_cast<ArrayType *>(base->getType());
+	if (!arrayType) {
+		return false;
+	}
+
+	const auto & dims = arrayType->getDimensions();
+	if (dims.empty() || node->sons.size() > dims.size()) {
+		return false;
+	}
+
+	auto currentFunc = module->getCurrentFunction();
+	if (!currentFunc) {
+		return false;
+	}
+
+	baseValue = base;
+	Value * linearOffset = module->newConstInt(0);
+
+	for (size_t i = 0; i < node->sons.size(); ++i) {
+		auto indexNode = node->sons[i];
+		auto indexAst = ir_visit_ast_node(indexNode);
+		if (!indexAst) {
+			return false;
+		}
+
+		node->blockInsts.addInst(indexAst->blockInsts);
+
+		int64_t stride = 1;
+		for (size_t k = i + 1; k < dims.size(); ++k) {
+			stride *= (dims[k] > 0 ? dims[k] : 1);
+		}
+
+		Value * term = indexAst->val;
+		if (stride != 1) {
+			auto * mulInst = new BinaryInstruction(
+				currentFunc,
+				IRInstOperator::IRINST_OP_MUL_I,
+				indexAst->val,
+				module->newConstInt((int32_t) stride),
+				IntegerType::getTypeInt());
+			node->blockInsts.addInst(mulInst);
+			term = mulInst;
+		}
+
+		if (i == 0) {
+			linearOffset = term;
+		} else {
+			auto * addInst = new BinaryInstruction(
+				currentFunc, IRInstOperator::IRINST_OP_ADD_I, linearOffset, term, IntegerType::getTypeInt());
+			node->blockInsts.addInst(addInst);
+			linearOffset = addInst;
 		}
 	}
 
-	return module->newFunction(nameNode->name, typeNode->type, params, false);
-}
+	auto * byteOffset = new BinaryInstruction(
+		currentFunc, IRInstOperator::IRINST_OP_MUL_I, linearOffset, module->newConstInt(4), IntegerType::getTypeInt());
+	node->blockInsts.addInst(byteOffset);
 
-} // namespace
+	addressValue = new BinaryInstruction(
+		currentFunc,
+		IRInstOperator::IRINST_OP_ADD_I,
+		base,
+		byteOffset,
+		const_cast<PointerType *>(PointerType::get(IntegerType::getTypeInt())));
+	node->blockInsts.addInst(static_cast<Instruction *>(addressValue));
+
+	return true;
+}
 
 /// @brief 构造函数
 /// @param _root AST的根
@@ -101,6 +187,7 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
 
 	/* 函数调用 */
 	ast2ir_handlers[ast_operator_type::AST_OP_FUNC_CALL] = &IRGenerator::ir_function_call;
+	ast2ir_handlers[ast_operator_type::AST_OP_LVAL] = &IRGenerator::ir_lval;
 
 	/* 函数定义 */
 	ast2ir_handlers[ast_operator_type::AST_OP_FUNC_DEF] = &IRGenerator::ir_function_define;
@@ -465,8 +552,17 @@ bool IRGenerator::ir_return(ast_node * node)
 		// 创建临时变量保存IR的值，以及线性IR指令
 		node->blockInsts.addInst(right->blockInsts);
 
-		// 返回值赋值到函数返回值变量上，然后跳转到函数的尾部
-		node->blockInsts.addInst(new MoveInstruction(currentFunc, currentFunc->getReturnValue(), right->val));
+		// 返回值赋值到函数返回值变量上，然后跳转到函数的尾部。
+		// 对于默认已经为 0 的返回值，避免重复生成同样的赋值。
+		bool needMove = true;
+		if (auto * constInt = dynamic_cast<ConstInt *>(right->val)) {
+			if (currentFunc->getReturnValue() && constInt->getVal() == 0) {
+				needMove = false;
+			}
+		}
+		if (needMove) {
+			node->blockInsts.addInst(new MoveInstruction(currentFunc, currentFunc->getReturnValue(), right->val));
+		}
 
 		node->val = right->val;
 	} else {
@@ -519,6 +615,37 @@ bool IRGenerator::ir_leaf_node_var_id(ast_node * node)
 
 	node->val = val;
 
+	return true;
+}
+
+/// @brief 左值/数组访问节点翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_lval(ast_node * node)
+{
+	if (!node) {
+		return false;
+	}
+
+	Value * value = module->findVarValue(node->name);
+	if (!value) {
+		return false;
+	}
+
+	if (node->sons.empty()) {
+		node->val = value;
+		return true;
+	}
+
+	Value * addressValue = nullptr;
+	Value * baseValue = nullptr;
+	if (!build_array_address_value(node, baseValue, addressValue)) {
+		return false;
+	}
+
+	auto loadInst = new LoadInstruction(module->getCurrentFunction(), addressValue, IntegerType::getTypeInt());
+	node->blockInsts.addInst(loadInst);
+	node->val = loadInst;
 	return true;
 }
 
@@ -1047,11 +1174,25 @@ bool IRGenerator::ir_assign(ast_node * node)
 	// 赋值节点，自右往左运算
 
 	// 赋值运算符的左侧操作数
-	ast_node * left = ir_visit_ast_node(son1_node);
-	if (!left) {
-		// 某个变量没有定值
-		// 这里缺省设置变量不存在则创建，因此这里不会错误
-		return false;
+	ast_node * left = nullptr;
+	Value * leftValue = nullptr;
+	if (son1_node->node_type == ast_operator_type::AST_OP_LVAL && !son1_node->sons.empty()) {
+		Value * baseValue = nullptr;
+		if (!build_array_address_value(son1_node, baseValue, leftValue)) {
+			return false;
+		}
+		left = son1_node;
+	} else {
+		left = ir_visit_ast_node(son1_node);
+		if (!left) {
+			// 某个变量没有定值
+			// 这里缺省设置变量不存在则创建，因此这里不会错误
+			return false;
+		}
+		if (left->val && left->val->getType() && left->val->getType()->isArrayType()) {
+			return false;
+		}
+		leftValue = left->val;
 	}
 
 	// 赋值运算符的右侧操作数
@@ -1063,7 +1204,12 @@ bool IRGenerator::ir_assign(ast_node * node)
 
 	// 这里只处理整型的数据，如需支持实数，则需要针对类型进行处理
 
-	MoveInstruction * movInst = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
+	Instruction * movInst = nullptr;
+	if (son1_node->node_type == ast_operator_type::AST_OP_LVAL && !son1_node->sons.empty()) {
+		movInst = new StoreInstruction(module->getCurrentFunction(), leftValue, right->val);
+	} else {
+		movInst = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
+	}
 
 	// 创建临时变量保存IR的值，以及线性IR指令
 	node->blockInsts.addInst(right->blockInsts);

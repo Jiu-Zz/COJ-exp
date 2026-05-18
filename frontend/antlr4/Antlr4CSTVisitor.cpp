@@ -131,7 +131,14 @@ std::any MiniCCSTVisitor::visitFuncFParam(MiniCParser::FuncFParamContext * ctx)
 	auto typeAttr = std::any_cast<type_attr>(visitBasicType(ctx->basicType()));
 	auto lineNo = (uint32_t) ctx->T_ID()->getSymbol()->getLine();
 	auto paramNode = ast_node::create_func_formal_param(lineNo, ctx->T_ID()->getText().c_str());
-	paramNode->type = ast_node::typeAttr2Type(typeAttr);
+	if (!ctx->T_L_BRACKET().empty()) {
+		paramNode->arrayDims.push_back(0);
+		for (auto constTok: ctx->T_CONST()) {
+			paramNode->arrayDims.push_back((int64_t) std::stoll(constTok->getText(), nullptr, 0));
+		}
+		paramNode->isArrayParam = true;
+	}
+	paramNode->type = ast_node::typeAttr2Type(typeAttr, paramNode->arrayDims);
 	return paramNode;
 }
 
@@ -522,14 +529,23 @@ std::any MiniCCSTVisitor::visitPrimaryExp(MiniCParser::PrimaryExpContext * ctx)
 
 std::any MiniCCSTVisitor::visitLVal(MiniCParser::LValContext * ctx)
 {
-	// 识别文法产生式：lVal: T_ID;
+	// 识别文法产生式：lVal: T_ID ('[' expr ']')*;
 	// 获取ID的名字
 	auto varId = ctx->T_ID()->getText();
 
 	// 获取行号
 	int64_t lineNo = (int64_t) ctx->T_ID()->getSymbol()->getLine();
 
-	return ast_node::New(varId, lineNo);
+	auto node = ast_node::New(ast_operator_type::AST_OP_LVAL);
+	node->name = varId;
+	node->line_no = lineNo;
+
+	for (auto exprCtx: ctx->expr()) {
+		auto exprNode = std::any_cast<ast_node *>(visitExpr(exprCtx));
+		(void) node->insert_son_node(exprNode);
+	}
+
+	return node;
 }
 
 std::any MiniCCSTVisitor::visitVarDecl(MiniCParser::VarDeclContext * ctx)
@@ -547,7 +563,7 @@ std::any MiniCCSTVisitor::visitVarDecl(MiniCParser::VarDeclContext * ctx)
 		ast_node * id_node = std::any_cast<ast_node *>(visitVarDef(varCtx));
 
 		// 创建类型节点
-		ast_node * type_node = ast_node::create_type_node(typeAttr);
+		ast_node * type_node = ast_node::create_type_node(typeAttr, id_node->arrayDims);
 
 		// 创建变量定义节点
 		ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, id_node);
@@ -561,14 +577,18 @@ std::any MiniCCSTVisitor::visitVarDecl(MiniCParser::VarDeclContext * ctx)
 
 std::any MiniCCSTVisitor::visitVarDef(MiniCParser::VarDefContext * ctx)
 {
-	// varDef: T_ID;
+	// varDef: T_ID (T_L_BRACKET T_CONST T_R_BRACKET)*;
 
 	auto varId = ctx->T_ID()->getText();
 
 	// 获取行号
 	int64_t lineNo = (int64_t) ctx->T_ID()->getSymbol()->getLine();
 
-	return ast_node::New(varId, lineNo);
+	auto node = ast_node::New(varId, lineNo);
+	for (auto constTok: ctx->T_CONST()) {
+		node->arrayDims.push_back((int64_t) std::stoll(constTok->getText(), nullptr, 0));
+	}
+	return node;
 }
 
 std::any MiniCCSTVisitor::visitBasicType(MiniCParser::BasicTypeContext * ctx)

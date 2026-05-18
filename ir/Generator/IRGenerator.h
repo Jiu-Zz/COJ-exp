@@ -1,7 +1,7 @@
 ﻿///
 /// @file IRGenerator.h
 /// @brief AST遍历产生线性IR的头文件
-/// @author zenglj (zenglj@live.com)
+/// @author Jiu-Zz
 /// @version 1.1
 /// @date 2024-11-23
 ///
@@ -10,8 +10,8 @@
 /// @par 修改日志:
 /// <table>
 /// <tr><th>Date       <th>Version <th>Author  <th>Description
-/// <tr><td>2024-09-29 <td>1.0     <td>zenglj  <td>新建
-/// <tr><td>2024-11-23 <td>1.1     <td>zenglj  <td>表达式版增强
+/// <tr><td>2024-09-29 <td>1.0     <td>Jiu-Zz  <td>新建
+/// <tr><td>2024-11-23 <td>1.1     <td>Jiu-Zz  <td>表达式版增强
 /// </table>
 ///
 #pragma once
@@ -155,6 +155,11 @@ protected:
 	/// @return 翻译是否成功，true：成功，false：失败
 	bool ir_leaf_node_var_id(ast_node * node);
 
+	/// @brief 左值/数组访问节点翻译成线性中间IR
+	/// @param node AST节点
+	/// @return 翻译是否成功，true：成功，false：失败
+	bool ir_lval(ast_node * node);
+
 	/// @brief 无符号整数字面量叶子节点翻译成线性中间IR
 	/// @param node AST节点
 	/// @return 翻译是否成功，true：成功，false：失败
@@ -195,6 +200,9 @@ protected:
 	/// @brief 创建当前函数中的新标签
 	/// @return LabelInstruction *
 	LabelInstruction * newLabel();
+
+	/// @brief 根据数组左值构建基址和地址值
+	bool build_array_address_value(ast_node * node, Value *& baseValue, Value *& addressValue);
 
 	/// @brief 根据AST的节点运算符查找对应的翻译函数并执行翻译动作
 	/// @param node AST节点

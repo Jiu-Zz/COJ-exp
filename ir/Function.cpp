@@ -19,6 +19,19 @@
 
 #include "IRConstant.h"
 #include "Function.h"
+#include "Types/ArrayType.h"
+
+namespace {
+	std::string formatLegacyTypeAndName(Type * type, const std::string & irName)
+	{
+		auto * arrayType = dynamic_cast<ArrayType *>(type);
+		if (arrayType) {
+			return arrayType->getLegacyElementTypeString() + " " + irName + arrayType->getLegacyDimensionsString();
+		}
+		return type->toString() + " " + irName;
+	}
+
+} // namespace
 
 /// @brief 指定函数名字、函数类型的构造函数
 /// @param _name 函数名称
@@ -91,7 +104,7 @@ void Function::toString(std::string & str)
 			str += ", ";
 		}
 
-		std::string param_str = param->getType()->toString() + " " + param->getIRName();
+		std::string param_str = formatLegacyTypeAndName(param->getType(), param->getIRName());
 
 		str += param_str;
 	}
@@ -102,7 +115,7 @@ void Function::toString(std::string & str)
 	for (auto & var: this->varsVector) {
 
 		// 局部变量和临时变量需要输出declare语句
-		str += "\tdeclare " + var->getType()->toString() + " " + var->getIRName();
+		str += "\tdeclare " + formatLegacyTypeAndName(var->getType(), var->getIRName());
 
 		std::string extraStr;
 		std::string realName = var->getName();
@@ -120,7 +133,7 @@ void Function::toString(std::string & str)
 		if (inst->hasResultValue()) {
 
 			// 局部变量和临时变量需要输出declare语句
-			str += "\tdeclare " + inst->getType()->toString() + " " + inst->getIRName() + "\n";
+			str += "\tdeclare " + formatLegacyTypeAndName(inst->getType(), inst->getIRName()) + "\n";
 		}
 	}
 

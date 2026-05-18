@@ -19,6 +19,7 @@
 #include "ILocArm32.h"
 #include "Common.h"
 #include "Function.h"
+#include "Types/ArrayType.h"
 #include "PlatformArm32.h"
 #include "Module.h"
 
@@ -360,6 +361,9 @@ void ILocArm32::mov_reg(int rs_reg_no, int src_reg_no)
 /// @param src_var 源操作数
 void ILocArm32::load_var(int rs_reg_no, Value * src_var)
 {
+	if (!src_var) {
+		return;
+	}
 
 	if (Instanceof(constVal, ConstInt *, src_var)) {
 		// 整型常量
@@ -378,6 +382,13 @@ void ILocArm32::load_var(int rs_reg_no, Value * src_var)
 			emit("mov", PlatformArm32::regName[rs_reg_no], PlatformArm32::regName[src_regId]);
 		}
 	} else if (Instanceof(globalVar, GlobalVariable *, src_var)) {
+		auto * arrayType = dynamic_cast<ArrayType *>(src_var->getType());
+		if (arrayType && !arrayType->isPointerLike()) {
+			// 全局数组作为值使用时退化为首地址，不读取首元素
+			load_symbol(rs_reg_no, globalVar->getName());
+			return;
+		}
+
 		// 全局变量
 
 		// 读取全局变量的地址
@@ -385,10 +396,14 @@ void ILocArm32::load_var(int rs_reg_no, Value * src_var)
 		// movt r8, #:lower16:a
 		load_symbol(rs_reg_no, globalVar->getName());
 
-		// ldr r8, [r8]
-		emit("ldr", PlatformArm32::regName[rs_reg_no], "[" + PlatformArm32::regName[rs_reg_no] + "]");
+		// 数组参数或指针类型按普通指针值处理，否则读取全局变量本身的值
+		if (!arrayType || arrayType->isPointerLike()) {
+			// ldr r8, [r8]
+			emit("ldr", PlatformArm32::regName[rs_reg_no], "[" + PlatformArm32::regName[rs_reg_no] + "]");
+		}
 
 	} else {
+		auto * arrayType = dynamic_cast<ArrayType *>(src_var->getType());
 
 		// 栈+偏移的寻址方式
 
@@ -401,11 +416,14 @@ void ILocArm32::load_var(int rs_reg_no, Value * src_var)
 			minic_log(LOG_ERROR, "BUG");
 		}
 
-		// 对于栈内分配的局部数组，可直接在栈指针上进行移动与运算
-		// 但对于形参，其保存的是调用函数栈的数组的地址，需要读取出来
-
-		// ldr r8,[sp,#16]
-		load_base(rs_reg_no, var_baseRegId, var_offset);
+		if (arrayType && !arrayType->isPointerLike()) {
+			// 局部数组退化成首地址
+			leaStack(rs_reg_no, var_baseRegId, var_offset);
+		} else {
+			// 对于形参，其保存的是调用函数栈的数组的地址，需要读取出来
+			// ldr r8,[sp,#16]
+			load_base(rs_reg_no, var_baseRegId, var_offset);
+		}
 	}
 }
 
@@ -417,7 +435,11 @@ void ILocArm32::lea_var(int rs_reg_no, Value * var)
 	// 被加载的变量肯定不是常量！
 	// 被加载的变量肯定不是寄存器变量！
 
-	// 目前只考虑局部变量
+	// 目前只考虑局部变量与全局变量的地址
+	if (Instanceof(globalVar, GlobalVariable *, var)) {
+		load_symbol(rs_reg_no, globalVar->getName());
+		return;
+	}
 
 	// 栈帧偏移
 	int32_t var_baseRegId = -1;

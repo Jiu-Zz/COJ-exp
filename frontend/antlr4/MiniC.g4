@@ -37,11 +37,15 @@ basicType: T_INT;
 // 函数形参列表
 funcFParams: funcFParam (T_COMMA funcFParam)*;
 
-// 函数形参
-funcFParam: basicType T_ID;
+// 函数形参：标量或数组参数；数组参数允许首维空括号，表示指针退化
+funcFParam:
+	basicType T_ID
+	| basicType T_ID T_L_BRACKET T_R_BRACKET (
+		T_L_BRACKET T_CONST T_R_BRACKET
+	)*;
 
 // 变量定义
-varDef: T_ID;
+varDef: T_ID (T_L_BRACKET T_CONST T_R_BRACKET)*;
 
 // 目前语句支持return和赋值语句
 statement:
@@ -95,12 +99,14 @@ primaryExp: T_L_PAREN expr T_R_PAREN | T_CONST | lVal;
 realParamList: expr (T_COMMA expr)*;
 
 // 左值表达式
-lVal: T_ID;
+lVal: T_ID (T_L_BRACKET expr T_R_BRACKET)*;
 
 // 用正规式来进行词法规则的描述
 
 T_L_PAREN: '(';
 T_R_PAREN: ')';
+T_L_BRACKET: '[';
+T_R_BRACKET: ']';
 T_SEMICOLON: ';';
 T_L_BRACE: '{';
 T_R_BRACE: '}';

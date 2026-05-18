@@ -49,6 +49,8 @@
 
 "("         { return T_L_PAREN; }
 ")"         { return T_R_PAREN; }
+"["         { return T_L_BRACKET; }
+"]"         { return T_R_BRACKET; }
 "{"         { return T_L_BRACE; }
 "}"         { return T_R_BRACE; }
 

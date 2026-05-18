@@ -19,6 +19,7 @@
 
 #include "AST.h"
 #include "AttrType.h"
+#include "Types/ArrayType.h"
 #include "Types/IntegerType.h"
 #include "Types/VoidType.h"
 
@@ -214,6 +215,20 @@ Type * ast_node::typeAttr2Type(type_attr & attr)
 	}
 }
 
+Type * ast_node::typeAttr2Type(type_attr & attr, const std::vector<int64_t> & dims)
+{
+	Type * baseType = typeAttr2Type(attr);
+	if (dims.empty()) {
+		return baseType;
+	}
+
+	if (attr.type == BasicType::TYPE_INT) {
+		return const_cast<ArrayType *>(ArrayType::get(baseType, dims));
+	}
+
+	return baseType;
+}
+
 /// @brief 创建类型节点
 /// @param type 类型信息
 /// @return 创建的节点
@@ -223,6 +238,13 @@ ast_node * ast_node::create_type_node(type_attr & attr)
 
 	ast_node * type_node = ast_node::New(type);
 
+	return type_node;
+}
+
+ast_node * ast_node::create_type_node(type_attr & attr, const std::vector<int64_t> & dims)
+{
+	Type * type = typeAttr2Type(attr, dims);
+	ast_node * type_node = ast_node::New(type);
 	return type_node;
 }
 
@@ -300,6 +322,16 @@ ast_node * ast_node::createVarDeclNode(Type * type, var_id_attr & id)
 	decl_node->type = type;
 
 	return decl_node;
+}
+
+ast_node * ast_node::createVarDeclNode(Type * type, var_id_attr & id, const std::vector<int64_t> & dims)
+{
+	Type * finalType = type;
+	if (type && !dims.empty() && type->isIntegerType()) {
+		finalType = const_cast<ArrayType *>(ArrayType::get(type, dims));
+	}
+
+	return createVarDeclNode(finalType, id);
 }
 
 ast_node * ast_node::createVarDeclNode(type_attr & type, var_id_attr & id)

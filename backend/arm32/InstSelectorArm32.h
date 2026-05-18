@@ -60,6 +60,14 @@ protected:
 	/// @param inst IR指令
 	void translate_assign(Instruction * inst);
 
+	/// @brief 间接读指令翻译成ARM32汇编
+	/// @param inst IR指令
+	void translate_load(Instruction * inst);
+
+	/// @brief 间接写指令翻译成ARM32汇编
+	/// @param inst IR指令
+	void translate_store(Instruction * inst);
+
 	/// @brief Label指令指令翻译成ARM32汇编
 	/// @param inst IR指令
 	void translate_label(Instruction * inst);

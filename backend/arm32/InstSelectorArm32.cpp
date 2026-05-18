@@ -28,6 +28,8 @@
 #include "GotoInstruction.h"
 #include "FuncCallInstruction.h"
 #include "MoveInstruction.h"
+#include "LoadInstruction.h"
+#include "StoreInstruction.h"
 
 /// @brief 构造函数
 /// @param _irCode 指令
@@ -44,6 +46,8 @@ InstSelectorArm32::InstSelectorArm32(
 	translator_handlers[IRInstOperator::IRINST_OP_GOTO] = &InstSelectorArm32::translate_goto;
 
 	translator_handlers[IRInstOperator::IRINST_OP_ASSIGN] = &InstSelectorArm32::translate_assign;
+	translator_handlers[IRInstOperator::IRINST_OP_LOAD] = &InstSelectorArm32::translate_load;
+	translator_handlers[IRInstOperator::IRINST_OP_STORE] = &InstSelectorArm32::translate_store;
 
 	translator_handlers[IRInstOperator::IRINST_OP_ADD_I] = &InstSelectorArm32::translate_add_int32;
 	translator_handlers[IRInstOperator::IRINST_OP_SUB_I] = &InstSelectorArm32::translate_sub_int32;
@@ -218,6 +222,68 @@ void InstSelectorArm32::translate_assign(Instruction * inst)
 		iloc.store_var(temp_regno, result, ARM32_TMP_REG_NO);
 
 		simpleRegisterAllocator.free(temp_regno);
+	}
+}
+
+/// @brief 间接读指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_load(Instruction * inst)
+{
+	Instanceof(loadInst, LoadInstruction *, inst);
+	Value * addr = loadInst->getOperand(0);
+
+	int32_t addrReg = addr->getRegId();
+	if (addrReg == -1) {
+		addrReg = simpleRegisterAllocator.Allocate();
+		iloc.load_var(addrReg, addr);
+	}
+
+	if (inst->getRegId() != -1) {
+		iloc.inst("ldr", PlatformArm32::regName[inst->getRegId()], "[" + PlatformArm32::regName[addrReg] + "]");
+	} else {
+		int32_t tempReg = simpleRegisterAllocator.Allocate();
+		iloc.inst("ldr", PlatformArm32::regName[tempReg], "[" + PlatformArm32::regName[addrReg] + "]");
+		iloc.store_var(tempReg, inst, ARM32_TMP_REG_NO);
+		simpleRegisterAllocator.free(tempReg);
+	}
+
+	if (addr->getRegId() == -1) {
+		simpleRegisterAllocator.free(addrReg);
+	}
+}
+
+/// @brief 间接写指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_store(Instruction * inst)
+{
+	Instanceof(storeInst, StoreInstruction *, inst);
+	Value * addr = storeInst->getOperand(0);
+	Value * src = storeInst->getOperand(1);
+
+	int32_t addrReg = addr->getRegId();
+	if (addrReg == -1) {
+		addrReg = simpleRegisterAllocator.Allocate();
+		iloc.load_var(addrReg, addr);
+	}
+
+	int32_t srcReg = src->getRegId();
+	bool freeSrcReg = false;
+	if (srcReg == -1) {
+		srcReg = simpleRegisterAllocator.Allocate();
+		iloc.load_var(srcReg, src);
+		freeSrcReg = true;
+	}
+
+	if (addrReg != -1 && srcReg != -1) {
+		iloc.inst("str", PlatformArm32::regName[srcReg], "[" + PlatformArm32::regName[addrReg] + "]");
+	}
+
+	if (freeSrcReg) {
+		simpleRegisterAllocator.free(srcReg);
+	}
+
+	if (addr->getRegId() == -1) {
+		simpleRegisterAllocator.free(addrReg);
 	}
 }
 
